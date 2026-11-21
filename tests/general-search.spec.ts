@@ -187,4 +187,37 @@ test.describe('general product search', () => {
       expect(box!.x + box!.width).toBeLessThanOrEqual(w + 1)
     }
   })
+
+  test('9. too few comparable offers: no headline price, condition sections, and each group gives its own results', async ({ users }) => {
+    const [u] = await users(1)
+    const p = u.page
+    const base = AIRPODS.candidates[0]
+    const mk = (title: string, price: number, i: number) => ({ ...base.offers[i % base.offers.length], title, price, seller: `Seller ${i}`, sellerUrl: `https://s${i}.example/`, listingUrl: `https://s${i}.example/p/${i}` })
+    const g1 = { ...base, pid: 1, title: 'Apple AirPods Pro 2nd Generation', offers: [
+      mk('Apple AirPods Pro 2nd Generation Wireless Earbuds', 150, 1), mk('Apple AirPods Pro 2nd Gen with MagSafe Charging Case', 160, 2),
+      mk('Apple AirPods Pro 2nd Generation Not Working With', 19.99, 3), mk('Apple AirPods Pro 2nd Generation Earbuds Only', 40, 4),
+      mk('Apple AirPods Pro 2nd Generation Certified Used Refurbished', 120, 5), mk('Apple AirPods Pro 2nd Generation - New', 190, 6),
+    ] }
+    const g2 = { ...base, pid: 2, title: 'Apple AirPods Pro 2nd Generation Lightning', offers: [mk('Apple AirPods Pro 2nd Generation Lightning White', 170, 7)] }
+    await mockSearch(p, { candidates: [g1, g2], source: AIRPODS.source })
+    const n = guard(p)
+    await search(p, 'Apple AirPods Pro 2')
+    await expect(p.getByTestId('candidate-picker')).toBeVisible({ timeout: 20_000 })
+    await p.getByTestId('candidate-0').click()
+    await expect(p.getByTestId('comparison')).toBeVisible()
+    // one "New" listing is not enough: no lowest price is shown, and the reason is stated
+    await expect(p.getByTestId('price-unreliable')).toContainText('Not enough comparable offers to determine a reliable lowest price')
+    await expect(p.getByTestId('cheapest')).toHaveCount(0)
+    // the cut-off "Not Working With" and "Earbuds Only" listings are in their own section, never in the comparable group
+    const defective = p.getByTestId('section-defective')
+    await expect(defective).toContainText('Not Working With')
+    await expect(defective).toContainText('Earbuds Only')
+    await expect(p.getByTestId('section-unknowncondition')).toBeVisible()
+    await expect(p.getByTestId('section-comparable')).not.toContainText('Not Working')
+    // another group is another comparison
+    await p.getByTestId('candidate-1').click()
+    await expect(p.getByTestId('section-defective')).toHaveCount(0)
+    await expect(p.getByTestId('comparison')).not.toContainText('Not Working With')
+    expect(n.pricesapi).toEqual([])
+  })
 })

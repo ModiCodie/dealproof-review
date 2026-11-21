@@ -4,7 +4,7 @@ import airpods from '../../tests/fixtures/synthetic/airpods.json'
 import vague from '../../tests/fixtures/synthetic/vague.json'
 import empty from '../../tests/fixtures/synthetic/empty.json'
 import type { ProductCandidate } from './pricing-types'
-import { cleanTitle, initialPick, targetForCandidate, viewCandidates } from './candidates'
+import { cleanTitle, initialPick, noneConfirmed, offersForView, targetForCandidate, viewCandidates } from './candidates'
 import { identityLevel } from './matching'
 
 const cands = (f: unknown) => (f as { candidates: ProductCandidate[] }).candidates
@@ -32,11 +32,31 @@ describe('viewCandidates / initialPick', () => {
     expect(viewCandidates('WD Black SN850X', cands(ssd)).map((v) => v.fit)).toEqual(['fits', 'fits']) // no capacity asked: the user chooses
   })
   it('pre-selects nothing when two groups fit equally or the search is general', () => {
-    const two = cands(airpods).slice(0, 1).concat(cands(airpods).slice(0, 1))
-    expect(initialPick(viewCandidates('Apple AirPods Pro 2', two))).toBeNull()
+    expect(initialPick(viewCandidates('WD Black SN850X', cands(ssd)))).toBeNull() // two groups fit equally
     const v = viewCandidates('Dyson cordless vacuum', cands(vague))
     expect(v.every((x) => x.fit === 'unclear')).toBe(true)
     expect(initialPick(v)).toBeNull()
+  })
+  it('merges groups only when their cleaned titles are identical, never similar ones', () => {
+    const one = cands(airpods)[0]
+    const dup = viewCandidates('Apple AirPods Pro 2', [one, { ...one, pid: 1 }])
+    expect(dup).toHaveLength(1)
+    expect(dup[0].indices).toEqual([0, 1])
+    // "AirPods Pro" vs "AirPods Pro with MagSafe Case": similar, but may be different generations: stay separate
+    const a = { ...one, title: 'Apple AirPods Pro' }
+    const b = { ...one, title: 'Apple AirPods Pro with MagSafe Case' }
+    expect(viewCandidates('Apple AirPods Pro 2', [a, b])).toHaveLength(2)
+  })
+  it('scopes a choice to its own group: different groups give different offers', () => {
+    const c = cands(airpods)
+    const views = viewCandidates('Apple AirPods Pro 2', c)
+    expect(offersForView(views[0], c).length).toBe(c[0].offers.length)
+    expect(offersForView(views[1], c)).not.toEqual(offersForView(views[0], c))
+  })
+  it('says so when no group title confirms the search', () => {
+    const vagueTitles = ['Apple AirPods Pro', 'Apple AirPods Pro with MagSafe Case'].map((title) => ({ ...cands(airpods)[0], title }))
+    expect(noneConfirmed(viewCandidates('Apple AirPods Pro 2', vagueTitles))).toBe(true)
+    expect(noneConfirmed(viewCandidates('Apple AirPods Pro 2', cands(airpods)))).toBe(false)
   })
   it('lists nothing for a search with no results and skips groups without offers', () => {
     expect(viewCandidates('Zorblax Quantum Teapot 9000', cands(empty))).toEqual([])

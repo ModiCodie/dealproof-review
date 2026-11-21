@@ -20,6 +20,7 @@ import type {
   Comparison,
   MissingField,
   OfferAnalysis,
+  PriceSummary,
   ProductTarget,
   VariantGroup,
 } from './types'
@@ -44,6 +45,7 @@ export function analyzeOffer(target: ProductTarget, offer: NormalizedOffer, id: 
   const condition = detectCondition(offer.title)
   const seller = identifySeller(offer)
   const missing: MissingField[] = []
+  const unresolved = target.family === 'generic' ? match.evidence.filter((e) => e.effect === 'info' && e.value === 'not stated' && MATERIAL.has(e.attribute)).map((e) => e.attribute) : []
   if (condition.value === 'unknown') missing.push('condition')
   if (offer.deliveryInfo === null) missing.push('shipping')
   if (!seller.raw || (seller.firstParty !== 'yes' && !seller.sellerName && seller.platformKind !== 'unknown' && seller.platformKind !== 'retailer')) missing.push('seller')
@@ -54,6 +56,7 @@ export function analyzeOffer(target: ProductTarget, offer: NormalizedOffer, id: 
     offer,
     match,
     condition,
+    unresolved,
     availability: offer.availability,
     seller,
     priceVerification: 'api_reported_not_verified',
@@ -65,6 +68,12 @@ export function analyzeOffer(target: ProductTarget, offer: NormalizedOffer, id: 
 }
 
 const SECOND_HAND = new Set(['used', 'refurbished', 'open_box'])
+/** Never a normal full-product price: broken, for parts, or sold without part of the product. */
+const NOT_WHOLE = new Set(['defective', 'incomplete'])
+/** Configuration attributes whose absence from a title leaves the price ambiguous (heatsink is not one: no mention means none). */
+const MATERIAL = new Set(['storage', 'memory', 'generation', 'screen size', 'connector'])
+/** Independent sellers with a qualifying listing needed before a general product gets a lowest-price headline. */
+const NEEDED_SELLERS = 3
 
 export function buildComparison(target: ProductTarget, offers: NormalizedOffer[], sourceScrapedAt: string | null): Comparison {
   // 1-2. analyze + de-duplicate
@@ -84,8 +93,13 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
 
   // 3. price baseline: same product + variant, new or unknown condition, one price
   //    per independent seller, at least 6 of them (see anomalies.ts)
+  const strict = target.family === 'generic'
+  // General products: only listings that state "new" and leave no material configuration open are priced against each
+  // other. Unknown condition is not treated as new, and a configuration the title leaves open is not guessed.
+  const eligible = (a: OfferAnalysis) =>
+    !SECOND_HAND.has(a.condition.value) && !NOT_WHOLE.has(a.condition.value) && (!strict || (a.condition.value === 'new' && a.unresolved.length === 0))
   const pool = analyses.filter(
-    (a) => (a.match.class === 'EXACT' || a.match.class === 'LIKELY') && !SECOND_HAND.has(a.condition.value) && a.offer.price !== null,
+    (a) => (a.match.class === 'EXACT' || a.match.class === 'LIKELY') && eligible(a) && a.offer.price !== null,
   )
   // Prices in different currencies are never mixed: assess only the most common one.
   const byCurrency = new Map<string, number>()
@@ -105,6 +119,9 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
   const priceCheck: OfferAnalysis[] = []
   const ambiguous: OfferAnalysis[] = []
   const secondHand: OfferAnalysis[] = []
+  const defective: OfferAnalysis[] = []
+  const unknownCondition: OfferAnalysis[] = []
+  const needsConfig: OfferAnalysis[] = []
   const rejected: OfferAnalysis[] = []
   const variantMap = new Map<string, OfferAnalysis[]>()
 
@@ -119,17 +136,22 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
         break
       }
       case 'AMBIGUOUS':
-        ambiguous.push(a)
+        // a listing that says it is broken / for parts / incomplete is shown as such, not left among the "needs a look" items
+        if (strict && NOT_WHOLE.has(a.condition.value)) defective.push(a)
+        else ambiguous.push(a)
         break
       default:
-        if (SECOND_HAND.has(a.condition.value)) secondHand.push(a)
+        if (NOT_WHOLE.has(a.condition.value)) defective.push(a)
+        else if (SECOND_HAND.has(a.condition.value)) secondHand.push(a)
+        else if (strict && a.unresolved.length) needsConfig.push(a)
+        else if (strict && a.condition.value !== 'new') unknownCondition.push(a)
         else if (a.priceSignal.status === 'unusually_low') priceCheck.push(a)
         else comparable.push(a)
     }
   }
 
   const byPrice = (x: OfferAnalysis, y: OfferAnalysis) => (x.offer.price ?? Infinity) - (y.offer.price ?? Infinity)
-  for (const list of [comparable, priceCheck, ambiguous, secondHand, rejected]) list.sort(byPrice)
+  for (const list of [comparable, priceCheck, ambiguous, secondHand, defective, unknownCondition, needsConfig, rejected]) list.sort(byPrice)
   const differentVariants: VariantGroup[] = [...variantMap.entries()]
     .map(([label, list]) => ({ label, offers: list.sort(byPrice) }))
     .sort((a, b) => b.offers.length - a.offers.length || a.label.localeCompare(b.label))
@@ -155,7 +177,21 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
     .sort(byPrice)
   let cheapest: CheapestPick | null = null
   let lowestUnflagged: CheapestPick | null = null
-  if (buyable.length) {
+  const sellerCount = new Set(buyable.map((a) => sellerKey(a.seller))).size
+  const reliable = !strict || sellerCount >= NEEDED_SELLERS
+  const plural0 = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  const priceSummary: PriceSummary = strict
+    ? {
+        policy: 'strict',
+        reliable,
+        sellers: sellerCount,
+        needed: NEEDED_SELLERS,
+        reason: reliable
+          ? null
+          : `Not enough comparable offers to determine a reliable lowest price. ${plural0(sellerCount, 'independent seller lists', 'independent sellers list')} this product as new in a stated configuration (at least ${NEEDED_SELLERS} are needed).${unknownCondition.length ? ` ${plural0(unknownCondition.length, 'more listing does', 'more listings do')} not state a condition.` : ''}${needsConfig.length ? ` ${plural0(needsConfig.length, 'listing does', 'listings do')} not state a configuration that other listings show differs.` : ''}`,
+      }
+    : { policy: 'standard', reliable: true, sellers: sellerCount, needed: 1, reason: null }
+  if (buyable.length && reliable) {
     const pick = buyable[0]
     cheapest = {
       offer: pick,
@@ -171,12 +207,16 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
 
   // 6. notes
   const notes: string[] = []
-  if (comparable.length) {
+  if (strict) {
+    if (unknownCondition.length) notes.push(`${plural0(unknownCondition.length, 'listing', 'listings')} match the product but state no condition, so ${unknownCondition.length === 1 ? 'it is' : 'they are'} not priced as new.`)
+    if (needsConfig.length) notes.push(`${plural0(needsConfig.length, 'listing', 'listings')} leave a configuration unstated (such as the connector or capacity) that other listings show differs, so ${needsConfig.length === 1 ? 'it needs' : 'they need'} checking before comparing prices.`)
+  } else if (comparable.length) {
     const unknownCond = comparable.filter((a) => a.condition.value === 'unknown').length
     if (unknownCond) notes.push(`Condition is not stated for ${unknownCond} of ${comparable.length} comparable offers, so this comparison is provisional.`)
   } else {
     notes.push('No offers could be confidently matched to the product and variant you chose.')
   }
+  if (strict && !comparable.length && !priceCheck.length && !unknownCondition.length && !needsConfig.length) notes.push('No offers could be confidently matched to the product and variant you chose.')
   if (analyses.length - offers.length < 0) notes.push(`${offers.length - analyses.length} identical listing${offers.length - analyses.length === 1 ? '' : 's'} merged.`)
 
   return {
@@ -187,6 +227,10 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
     ambiguous,
     differentVariants,
     secondHand,
+    defective,
+    unknownCondition,
+    needsConfig,
+    priceSummary,
     rejected,
     cheapest,
     lowestUnflagged,
@@ -206,6 +250,9 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
       rejected: rejected.length,
       ambiguous: ambiguous.length,
       secondHand: secondHand.length,
+      defective: defective.length,
+      unknownCondition: unknownCondition.length,
+      needsConfig: needsConfig.length,
     }),
     sourceScrapedAt,
     limitation: target.family === 'generic' && identityLevel(target.spec) === 'insufficient' ? INSUFFICIENT_MESSAGE : null,
@@ -221,6 +268,9 @@ interface FilterCounts {
   rejected: number
   ambiguous: number
   secondHand: number
+  defective?: number
+  unknownCondition?: number
+  needsConfig?: number
 }
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -233,6 +283,9 @@ export function summarizeFiltering(c: FilterCounts): string {
   if (c.variants) rest.push(`${c.variants} ${c.variants === 1 ? 'is a different variant' : 'are different variants'}`)
   if (c.rejected) rest.push(`${c.rejected} ${c.rejected === 1 ? 'is a different product or accessory' : 'are different products or accessories'}`)
   if (c.ambiguous) rest.push(`${c.ambiguous} ${c.ambiguous === 1 ? 'has' : 'have'} too little information to tell`)
+  if (c.defective) rest.push(`${c.defective} ${c.defective === 1 ? 'is' : 'are'} defective, for parts or sold incomplete`)
+  if (c.unknownCondition) rest.push(`${c.unknownCondition} match the product but state no condition`)
+  if (c.needsConfig) rest.push(`${c.needsConfig} leave a configuration unstated`)
   if (c.secondHand) rest.push(`${c.secondHand} ${c.secondHand === 1 ? 'is' : 'are'} used, refurbished or open-box`)
   const tail = rest.length ? ` The rest were set aside: ${rest.join('; ')}.` : ''
   return `${head}${tail} Listings are matched by known product attributes (model, edition, size). That does not guarantee that condition, seller or checkout cost are equivalent.`

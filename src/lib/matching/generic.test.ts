@@ -21,7 +21,7 @@ function run(f: Fixture, query: string, pick = 0, chosen: Record<string, string>
   const target = makeGenericTarget(spec, offers.map((o) => o.title), chosen)
   return { cmp: buildComparison(target, offers, f.source.scrapedAt), target }
 }
-const all = (c: Comparison) => [...c.comparable, ...c.priceCheck, ...c.ambiguous, ...c.secondHand, ...c.rejected, ...c.differentVariants.flatMap((v) => v.offers)]
+const all = (c: Comparison) => [...c.comparable, ...c.priceCheck, ...c.ambiguous, ...c.secondHand, ...c.defective, ...c.unknownCondition, ...c.needsConfig, ...c.rejected, ...c.differentVariants.flatMap((v) => v.offers)]
 const byTitle = (c: Comparison, part: string) => all(c).filter((a) => a.offer.title?.includes(part))
 const classes = (c: Comparison, part: string): MatchClass[] => byTitle(c, part).map((a) => a.match.class)
 const cls = (target: GenericTarget, title: string) => classifyGeneric(target, title).class
@@ -71,8 +71,10 @@ describe('consumer audio: Apple AirPods Pro 2 (name + number, no model code)', (
     const gen2 = byTitle(cmp, 'Apple AirPods Pro 2').concat(byTitle(cmp, '2nd Gen'), byTitle(cmp, '(2nd'))
     expect(gen2.length).toBeGreaterThan(6)
     expect(all(cmp).filter((a) => a.match.class === 'EXACT')).toHaveLength(0)
-    expect(cmp.comparable.length).toBeGreaterThanOrEqual(8)
-    expect(cmp.comparable.every((a) => a.match.class === 'LIKELY')).toBe(true)
+    // Spec change (strict general-product policy): only listings that state "New" are comparable; the rest are shown separately.
+    expect(cmp.comparable.length + cmp.unknownCondition.length).toBeGreaterThanOrEqual(8)
+    expect(cmp.comparable.length).toBeGreaterThanOrEqual(5)
+    expect(cmp.comparable.every((a) => a.match.class === 'LIKELY' && a.condition.value === 'new')).toBe(true)
     expect(cmp.comparable.some((a) => /no model code/.test(a.match.summary))).toBe(true)
   })
   it('excludes other generations as a different variant, grouped and labelled', () => {
@@ -111,11 +113,12 @@ describe('consumer audio: Apple AirPods Pro 2 (name + number, no model code)', (
     if (sig.status === 'unusually_low') expect(sig.baseline.median).toBeGreaterThan(195) // gen-2 listings only (the gen-1 $129 and the $369 pack are not in it)
   })
   it('states the unknowns: condition and shipping are not invented', () => {
-    const noShip = cmp.comparable.find((a) => a.offer.title?.includes('- New'))!
+    const noShip = cmp.comparable.find((a) => a.offer.title === 'Apple AirPods Pro 2nd Generation Earbuds - New')!
     expect(noShip.shipping).toBeNull()
     expect(noShip.missing).toContain('shipping')
     expect(noShip.condition.value).toBe('new') // stated by the title, unlike its neighbours
-    expect(cmp.comparable.find((a) => a.offer.title === 'Apple AirPods Pro (2nd Generation)')!.condition.value).toBe('unknown')
+    // a listing that says nothing about condition is shown, but never priced as new
+    expect(cmp.unknownCondition.find((a) => a.offer.title === 'Apple AirPods Pro (2nd Generation)')!.condition.value).toBe('unknown')
   })
 })
 
@@ -154,8 +157,10 @@ describe('computer hardware: WD Black SN850X (model code + storage + heatsink)',
     expect(one.comparable.every((a) => /1TB|1 TB/.test(a.offer.title ?? '') || a.match.class === 'LIKELY')).toBe(true)
     expect(one.differentVariants.map((g) => g.label)).toEqual(expect.arrayContaining(['2TB', '4TB']))
     // only 3 independent sellers list the 1TB model, so no price judgement is made
-    expect(one.comparable.length).toBeGreaterThan(0)
-    expect(one.comparable.every((a) => a.priceSignal.status === 'insufficient_evidence')).toBe(true)
+    // none of them states "New", so they are listed as condition-not-stated and no headline price is offered
+    expect(one.comparable.length + one.unknownCondition.length).toBeGreaterThan(0)
+    expect([...one.comparable, ...one.unknownCondition].every((a) => a.priceSignal.status !== 'unusually_low' && a.priceSignal.status !== 'not_unusually_low')).toBe(true)
+    expect(one.priceSummary.reliable).toBe(false)
   })
 })
 

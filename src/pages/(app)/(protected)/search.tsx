@@ -30,7 +30,7 @@ import { ProductIcon } from '@/components/dp/ProductIcon'
 import { CATALOG, catalogProduct, variantSummary, type CatalogKey, type CatalogProduct } from '@/lib/catalog'
 import { formatDate, formatTime, formatWait } from '@/lib/format'
 import { detectTarget } from '@/lib/matching'
-import { initialPick, targetForCandidate, viewCandidates, type CandidateView } from '@/lib/candidates'
+import { initialPick, noneConfirmed, offersForView, targetForCandidate, viewCandidates, type CandidateView } from '@/lib/candidates'
 import { usePageTitle } from '@/lib/use-page-title'
 import { cn } from '@/lib/utils'
 import type {
@@ -402,10 +402,13 @@ function GeneralCompared({ query, candidates, offers, scrapedAt }: { query: stri
   // it would show one product's name above another product's offers.
   const mismatch = chosenView?.fit === 'different' ? chosenView : null
   const chosen = pick === null || mismatch ? null : candidates[pick]
-  const built = useMemo(() => (chosen ? targetForCandidate(query, chosen, offers.map((o) => o.title)) : null), [query, chosen, offers])
+  // The comparison uses the chosen group's own listings. Groups are the feed's separate products and share almost no
+  // listings, so pooling them let one product's offers appear under another product's name.
+  const scoped = useMemo(() => (chosenView ? offersForView(chosenView, candidates) : []), [chosenView, candidates])
+  const built = useMemo(() => (chosen ? targetForCandidate(query, chosen, scoped.map((o) => o.title)) : null), [query, chosen, scoped])
   return (
     <div className="space-y-6" data-testid="general-compare">
-      <CandidatePicker views={views} value={pick} onChange={setPick} />
+      <CandidatePicker views={views} value={pick} onChange={setPick} unconfirmed={noneConfirmed(views)} />
       {mismatch && (
         <Notice testId="pick-mismatch" tone="caution" icon={Info} role="note" title="This isn’t the product you searched for">
           “{mismatch.title}” differs from “{query}”{mismatch.note ? `: ${mismatch.note.replace(/\.$/, '')}` : ''}. Nothing is compared for it, so its offers can’t be mistaken for your product’s. To compare it, search for it by name.
@@ -420,7 +423,7 @@ function GeneralCompared({ query, candidates, offers, scrapedAt }: { query: stri
           )}
           <ComparisonView
             key={`${query}|${scrapedAt ?? ''}|${pick}`}
-            offers={offers}
+            offers={scoped}
             scrapedAt={scrapedAt}
             initialTarget={built.target}
             renderActions={(t) => <SaveControl target={t} query={query} />}
@@ -431,7 +434,7 @@ function GeneralCompared({ query, candidates, offers, scrapedAt }: { query: stri
   )
 }
 
-function CandidatePicker({ views, value, onChange }: { views: CandidateView[]; value: number | null; onChange: (i: number) => void }) {
+function CandidatePicker({ views, value, onChange, unconfirmed }: { views: CandidateView[]; value: number | null; onChange: (i: number) => void; unconfirmed?: boolean }) {
   const move = (e: KeyboardEvent, pos: number) => {
     const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
     if (!step) return
@@ -446,9 +449,14 @@ function CandidatePicker({ views, value, onChange }: { views: CandidateView[]; v
       <h2 id="cand-heading" className="text-base font-semibold text-foreground">{many ? 'Which product did you mean?' : 'Is this the product you meant?'}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {many
-          ? 'The price feed found several different products for your search. Pick the one you want; DealProof then compares listings from every group against it, using their titles.'
+          ? 'The price feed found several different products for your search. Pick the one you want; DealProof then compares that group’s listings, judging each one by its own title.'
           : 'The price feed found one product. Check it is the one you want; DealProof compares listings against it using their titles.'}
       </p>
+      {unconfirmed && (
+        <p data-testid="candidates-unconfirmed" className="mt-2 text-sm text-foreground">
+          None of these groups’ titles confirms exactly the product you searched for (a name or number is missing). Choosing one does not confirm it: each listing is still judged by its own title, and listings that don’t state the details stay uncertain.
+        </p>
+      )}
       <div role="radiogroup" aria-labelledby="cand-heading" className="mt-3 grid gap-2.5">
         {views.map((v, pos) => {
           const selected = v.index === value

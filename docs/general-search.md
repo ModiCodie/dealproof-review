@@ -33,3 +33,22 @@ Identity comes from the search text: brand, model words, model codes (letters+di
 
 ## Tests and fixtures
 `tests/fixtures/synthetic/*` are invented (fictional `.example` retailers, made-up prices; `build.py` generates them). No test calls PricesAPI. Opt-in screenshots: `DP_SHOTS=1 npx deepspace test run e2e --grep "general shots" --port 5199` → `docs/screenshots/general-search/`.
+
+## Real-data hardening (after the one live AirPods Pro 2 search)
+
+The saved real response exposed defects, fixed without any new paid request:
+
+- **Charging case.** A charging case named after the product ("... MagSafe Charging Case (Lightning)") is part of a complete product. A part is rejected only on specific evidence: "X only", "replacement/spare", compatibility wording, "<part> for <product>", or a part word as the subject before the product name. A title that is cut off never earns a rejection from its missing tail.
+- **"Customizable Fit".** A lone "fit" or "for" is not compatibility wording. Phrases like "fits for", "compatible with" still are.
+- **Condition.** `new / used / refurbished / open-box / defective / incomplete / unknown`. Unknown is never new. "Certified Used Refurbished" is refurbished. A cut-off "Not Working With" is shown as *possibly defective*. Defective and incomplete listings (for parts, not working, earbuds only, one earbud, no case) go to their own section.
+- **Price summary (general products only).** A lowest-price headline needs at least 3 independent sellers listing the product as **new** with no open configuration. Otherwise the page says "Not enough comparable offers to determine a reliable lowest price" and still lists every listing, with why it is excluded or uncertain. The unusually-low heuristic runs only inside that homogeneous group. Prices stay feed-reported, not checkout-verified; a low-price flag is not a fraud claim.
+- **Connector.** Explicit "USB-C" / "Lightning" in a title is a variant dimension (generic, not AirPods-specific). A title that does not state it is "Configuration not stated" when other listings show the product comes in different configurations. The connector is never guessed.
+- **Candidates.** The feed's groups share almost no listings and differ in configuration, so a pick now compares **that group's own listings**, each judged by its own title; pooling made all picks identical. Groups merge only when their cleaned titles are identical. When no group title confirms the search, the picker says so.
+
+### Limitations
+- Saved comparisons store the product and variant but not which group was picked, so a reopened saved page pools all groups' listings (still judged by title).
+- Titles only: no GTIN/MPN, so a generation or connector not in the title stays unresolved. Truncation detection is a heuristic.
+- Specialised products (Sony, Logitech, Samsung) keep their original rules and price policy.
+
+### Real response and redistribution
+The real response stays **gitignored**. PricesAPI's terms (not legal advice) give no right to redistribute, so committed regression tests use synthetic titles written in the style of real listings; `live-sample.test.ts` and `tests/live-replay-shots.spec.ts` run only where the local file exists. The replay spec fixes the blank full-page screenshot (the app scrolls inside `<main>`, so `fullPage` captured one empty viewport) by sizing the viewport to the content after explicit readiness checks.

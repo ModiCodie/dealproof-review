@@ -48,7 +48,19 @@ const FILLER = new Set([
 const MODIFIERS = new Set(['pro', 'max', 'plus', 'ultra', 'mini', 'lite', 'se', 'air', 'xl', 'fe', 'edge', 'neo', 'evo', 'slim', 'turbo', 'prime', 'elite', 'gt'])
 /** Accessories and parts. */
 const ACCESSORY = /\b(ear ?pads?|ear ?cushions?|ear ?tips?|cases?|covers?|skins?|decals?|stickers?|protectors?|screen guards?|tempered glass|sleeves?|straps?|bands?|filters?|brush(?:es)?(?: heads?)?|batter(?:y|ies)|chargers?|charging (?:cable|dock|stand|pad)|cables?|adapters?|docks?|mounts?|stands?|holders?|replacement|spare|parts?|accessor(?:y|ies)|enclosures?|heat ?sinks? only|cooler|bag|pouch)\b/
-const COMPAT = /\b(for|fits?|compatible with|replacement for|designed for|works with|made for)\b/
+/** Specific compatibility phrases. A lone "fit" ("Customizable Fit") or "for" is not evidence of a part. */
+const COMPAT_STRONG = /\b(compatible with|compatible for|replacement for|designed for|made for|works with|suitable for|for use with|fits? (?:for|with|the|all|most|any))\b/
+/** Words that make a "case"/part a product of its own rather than something that comes with the device. */
+const STANDALONE = /\b(only|replacement|replacements|spare|empty|separate|protective|silicone|cover|covers|skin|skins|shell|sleeve|decal|sticker|hard case|soft case|case cover)\b/
+const ONLY_PART = /\b(?:cases?|covers?|skins?|straps?|bands?|stands?|docks?|chargers?|cables?|filters?|batter(?:y|ies)|tips?|pads?|mounts?|holders?|sleeves?|adapters?) only\b/
+const INCLUDE_MARK = /^(with|w|includes?|including|plus|and|bundle|bundled|free)$/
+/** Words that name the earbuds/headphones themselves, so a charging case next to them is part of the same product. */
+const AUDIO_SUBJECT = /\b(earbuds?|earphones?|headphones?|headset|buds|in-ear)\b/
+const CASE_DESCRIPTOR = new Set(['charging', 'magsafe', 'wireless', 'lightning', 'usb', 'c', 'usbc', 'carrying', 'carry'])
+/** True when a feed title looks cut off ("... Customizable Fit,", "... Not Working With"): details after it are unknown. */
+export function looksTruncated(raw: string | null): boolean {
+  return /(?:[,\-\u2013\u2014:;&(/]|\.{3}|\u2026|\b(?:with|for|and|w|of|the|a|an|in|by|to|or|plus))\s*$/i.test((raw ?? '').trim())
+}
 const BUNDLE = /\b(bundle|combo|kit|with free|plus free|\+)\b/
 const EDITION = /\b(limited|special|collector'?s?|anniversary|founders?|signature|deluxe|exclusive|holiday) edition\b/
 const UNIT_TOKEN = /^(?:\d+(?:\.\d+)?(?:hz|mah|wh|w|mm|cm|in|inch|k|p|gb|tb|mb|fps|ghz|mhz|nm|kg|lb|lbs|oz|ft|v|a|x|ms|db|rpm|mp)|usb\d*|wifi\d*|wi-?fi\d*|bt\d+|gen\d+|pcie\d*|ddr\d+x?|m2|2280|hdmi\d*|ps\d|\d+g|4k|8k|1080p|720p|hd|uhd|hdr\d*|qled|oled|led|lcd)$/
@@ -96,6 +108,8 @@ export interface Attributes {
   size: string[]
   /** 'with' / 'without' when the title says so; empty when it says nothing. */
   heatsink: string[]
+  /** Charging/data connector the title names ('USB-C', 'Lightning'). Two values = a material configuration difference. */
+  connector: string[]
   packs: number[]
 }
 
@@ -106,7 +120,7 @@ function capLabel(n: number, unit: string): string {
 
 export function attributesOf(raw: string | null): Attributes {
   const t = normalizeText(raw)
-  const out: Attributes = { storage: [], memory: [], generation: [], size: [], heatsink: [], packs: [] }
+  const out: Attributes = { storage: [], memory: [], generation: [], size: [], heatsink: [], connector: [], packs: [] }
   const add = (list: string[], v: string) => {
     if (!list.includes(v)) list.push(v)
   }
@@ -124,8 +138,11 @@ export function attributesOf(raw: string | null): Attributes {
   }
   if (/\b(?:w\/o|without|no) heat ?sink\b/.test(t)) add(out.heatsink, 'without')
   else if (/\bheat ?sinks?\b/.test(t) && !/\bheat ?sinks? only\b/.test(t)) add(out.heatsink, 'with')
-  for (const m of t.matchAll(/\b(\d{1,3})[ -]?(?:pack|pk|ct|count|pcs|pieces)\b|\b(?:pack|set|lot) of (\d{1,3})\b|\b(\d{1,2})x\b/g)) {
-    const n = parseInt(m[1] ?? m[2] ?? m[3], 10)
+  if (/\busb[- ]?c\b|\btype[- ]?c\b/.test(t)) add(out.connector, 'USB-C')
+  if (/\blightning\b/.test(t)) add(out.connector, 'Lightning')
+  for (const m of t.matchAll(/\b(\d{1,3})[ -]?(?:pack|pk|ct|count|pcs|pieces)\b|\b(?:pack|set|lot) of (\d{1,3})\b|\b(\d{1,2})x\b|\(?\b(\d{1,2}|two|three|four|five|six)\)? (?:pairs|sets)\b/g)) {
+    const w = ({ two: 2, three: 3, four: 4, five: 5, six: 6 } as Record<string, number>)[m[4] ?? '']
+    const n = w ?? parseInt(m[1] ?? m[2] ?? m[3] ?? m[4], 10)
     if (n > 1) out.packs.push(n)
   }
   return out
@@ -191,12 +208,14 @@ export function buildGenericSpec(query: string, candidateTitle: string | null): 
   pick('size')
   pick('generation')
   pick('heatsink')
+  pick('connector')
 
   // Identity words: the search text without capacity / size / generation phrases, colours, filler and stop words.
   const stripped = q
     .replace(/(\d{1,4}(?:\.\d{1,2})?)\s?(tb|gb)\b(\s?(?:ram|memory))?/g, ' ')
     .replace(/(\d{2,3}(?:\.\d)?)\s?(?:-?inch(?:es)?|"|″)/g, ' ')
     .replace(/\b\d{1,2}(?:st|nd|rd|th)[ -]?gen(?:eration)?\b|\bgen(?:eration)?[ -]?\d{1,2}\b/g, ' ')
+    .replace(/\busb[- ]?c\b|\btype[- ]?c\b|\blightning\b/g, ' ')
   const kept: string[] = []
   for (const raw of stripped.split(/\s+/)) {
     const w = raw.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '')
@@ -272,7 +291,7 @@ export function missingFromTitle(spec: GenericSpec, title: string | null): strin
 
 // ---------------------------------------------------------- variant controls
 
-const DIM_LABEL: Record<string, string> = { storage: 'Storage', memory: 'Memory', generation: 'Generation', size: 'Screen size', heatsink: 'Heatsink' }
+const DIM_LABEL: Record<string, string> = { storage: 'Storage', memory: 'Memory', generation: 'Generation', size: 'Screen size', heatsink: 'Heatsink', connector: 'Connector' }
 export const optionLabel = (key: string, v: string) => (key === 'heatsink' ? (v === 'with' ? 'With heatsink' : 'Without heatsink') : key === 'generation' ? `${ordinal(parseInt(v, 10))} generation` : key === 'size' ? `${parseFloat(v)}-inch` : key === 'memory' ? `${v} memory` : v)
 
 /**
@@ -281,7 +300,7 @@ export const optionLabel = (key: string, v: string) => (key === 'heatsink' ? (v 
  * search or picked product pinned. Nothing is invented from a guess.
  */
 export function discoverDimensions(spec: GenericSpec, titles: (string | null)[]): Dimension[] {
-  const counts: Record<string, Map<string, number>> = { storage: new Map(), memory: new Map(), generation: new Map(), size: new Map(), heatsink: new Map() }
+  const counts: Record<string, Map<string, number>> = { storage: new Map(), memory: new Map(), generation: new Map(), size: new Map(), heatsink: new Map(), connector: new Map() }
   for (const title of titles) {
     if (!coversIdentity(spec, title)) continue
     const a = attributesOf(title)
@@ -292,7 +311,7 @@ export function discoverDimensions(spec: GenericSpec, titles: (string | null)[])
   }
   const hasNumber = identityTokens(spec).some((x) => x.kind === 'number')
   const dims: Dimension[] = []
-  for (const key of ['storage', 'memory', 'generation', 'size', 'heatsink']) {
+  for (const key of ['storage', 'memory', 'generation', 'size', 'heatsink', 'connector']) {
     if (key === 'generation' && hasNumber) continue // the model number in the search already says which generation
     const seen = counts[key]
     const pin = spec.pins[key]
@@ -337,6 +356,76 @@ function decide(cls: MatchDecision['class'], summary: string, reasons: string[],
   return { class: cls, summary, reasons, evidence, variantLabel }
 }
 
+/**
+ * Is this listing a part, accessory or compatibility listing rather than the
+ * product? Decided only on specific evidence: "X only", "replacement/spare",
+ * a compatibility phrase, "... for <product>", or a part word as the subject
+ * before the product name. A part word that merely follows the product
+ * ("... with MagSafe Charging Case", "Customizable Fit") is not enough, and a
+ * title that is cut off never earns a rejection from its missing tail.
+ */
+function partVerdict(t: string, toks: string[], ends: number[], truncated: boolean): MatchDecision | null {
+  const firstId = Math.min(...ends)
+  const lastId = Math.max(...ends)
+  const parts = toks.map((w, i) => ({ w, i })).filter(({ w }) => ACCESSORY.test(w))
+  const chargingCase = (i: number) => toks[i] === 'case' && i > 0 && CASE_DESCRIPTOR.has(toks[i - 1])
+  const included = (i: number) => toks.slice(Math.max(0, i - 4), i).some((w) => INCLUDE_MARK.test(w))
+  const reject = (word: string, why: string) =>
+    decide('REJECTED', `This looks like a part or accessory ("${word}"), not the product itself.`, [why], [{ attribute: 'accessory wording', value: word, effect: 'conflicts', from: 'title' }])
+  const unsure = (word: string, summary: string, why: string) =>
+    decide('AMBIGUOUS', summary, [why], [{ attribute: 'accessory wording', value: word, effect: 'conflicts', from: 'title' }])
+
+  const only = t.match(ONLY_PART)
+  if (only) return reject(only[0], 'The title says it is the part on its own ("only").')
+
+  // "<something> for <brand model>": made for the product, not the product
+  const forIdx = toks.slice(0, firstId).lastIndexOf('for')
+  if (forIdx >= 1 && firstId - forIdx <= 3) {
+    const before = parts.find((p) => p.i < forIdx)
+    if (before) return reject(before.w, `A "${before.w}" made "for" the product is an accessory.`)
+    return unsure('for', 'The title says the listing is "for" this product, so it may be a part rather than the product.', 'Listings of the form "<item> for <product>" are usually replacement parts or accessories.')
+  }
+
+  const compat = t.match(COMPAT_STRONG)
+  if (compat) {
+    const p = parts.find((x) => !chargingCase(x.i))
+    if (p) return reject(p.w, `Compatibility wording ("${compat[0]}") with a "${p.w}" marks an accessory.`)
+    if ((compat.index ?? 0) < t.indexOf(toks[firstId])) {
+      return unsure(compat[0], 'The title reads like a compatibility listing.', '"Compatible with" wording before the product name often means the listing is for a part or accessory.')
+    }
+  }
+
+  if (/\b(replacement|replacements|spare)\b/.test(t)) {
+    const p = parts[0]
+    if (p) return reject(p.w, 'The title says "replacement" or "spare" with a part word.')
+    return unsure('replacement', 'The title says "replacement" or "spare", so it may be a part.', 'A replacement item is not the whole product.')
+  }
+
+  const before = parts.find((p) => p.i < firstId && !(chargingCase(p.i) && included(p.i)))
+  if (before) return reject(before.w, `A "${before.w}" before the product name is usually the accessory itself.`)
+
+  const standalone = t.match(STANDALONE)
+  if (standalone) {
+    const p = parts.find((x) => !included(x.i))
+    if (p) return reject(p.w, `"${standalone[0]}" marks the ${p.w} as an item of its own.`)
+  }
+
+  if (!truncated) {
+    // a part word right after the product name or ending the title, unless introduced as an inclusion
+    const tail = parts.find((p) => p.i > lastId && !chargingCase(p.i) && (p.i - lastId <= 2 || p.i >= toks.length - 3) && !included(p.i))
+    if (tail) return unsure(tail.w, `The title ends like a part or accessory ("${tail.w}"), so it may not be the product itself.`, 'Part words next to the model name often mean a replacement part or accessory, not the product.')
+  }
+  return null
+}
+
+/** A charging case named as the last thing in the title, with nothing saying the earbuds come with it. */
+function caseOnlyCaveat(toks: string[], t: string): string | null {
+  const i = toks.findIndex((w, k) => w === 'case' && k > 0 && CASE_DESCRIPTOR.has(toks[k - 1]))
+  if (i < 0 || AUDIO_SUBJECT.test(t)) return null
+  if (toks.slice(Math.max(0, i - 5), i).some((w) => INCLUDE_MARK.test(w))) return null
+  return 'the title names a charging case but does not say the earbuds come with it'
+}
+
 export const INSUFFICIENT_MESSAGE =
   'Your search does not name a specific model (for example "Dyson V15 Detect" or "WD Black SN850X"), so DealProof cannot tell which listings are the same product. No prices are compared.'
 
@@ -374,43 +463,10 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
   const idTexts = new Set(id.map((x) => x.text))
   const otherCodes = toks.filter((w) => isCode(w) && !idTexts.has(w))
 
+  const truncated = looksTruncated(title)
   if (ends.length) {
-    // --- accessory / compatibility wording
-    const firstId = ends.length ? Math.min(...ends) : 0
-    const accessoryOnly = /\b(?:case|cover|skin|strap|band|stand|dock|charger|cable|filter|battery|tips?|pads?|mount|holder|sleeve|adapter)s? only\b/.test(t)
-    const accessory = t.match(ACCESSORY)
-    const compat = t.match(COMPAT)
-    const accessoryPos = accessory ? toks.findIndex((w) => accessory[0].split(' ')[0] === w) : -1
-    if (accessory) {
-      const forPattern = new RegExp(`${COMPAT.source}[^,;]{0,40}`).test(t.slice(0, Math.max(0, t.indexOf(accessory[0]) + accessory[0].length + 40)))
-      if (accessoryOnly || (compat && compat.index !== undefined && t.indexOf(accessory[0]) < compat.index) || forPattern || (accessoryPos >= 0 && accessoryPos < firstId)) {
-        return decide('REJECTED', `This looks like an accessory ("${accessory[0]}"), not the product itself.`, ['Accessory wording appears before or together with compatibility wording.'], [
-          { attribute: 'accessory wording', value: accessory[0], effect: 'conflicts', from: 'title' },
-        ])
-      }
-    } else if (compat && compat.index !== undefined && compat.index < (t.indexOf(coreWords[0]?.text ?? codes[0]?.text ?? '') + 1 || 1) && /\b(compatible with|fits?|replacement for|works with)\b/.test(t)) {
-      return decide('AMBIGUOUS', 'The title reads like a compatibility listing.', ['"Compatible with" wording often means the listing is for a part or accessory.'], [
-        ...ev,
-        { attribute: 'compatibility wording', value: compat[0], effect: 'conflicts', from: 'title' },
-      ])
-    }
-  }
-  if (ends.length) {
-    // Part words right after the model ("... V15 Detect Replacement Battery", "... Wall Mount Dock") or ending the title,
-    // unless introduced as an inclusion ("with ... case"): probably a part or accessory, so it is kept out of the comparison.
-    const tail = toks.slice(Math.max(...ends) + 1)
-    const isPart = (w: string) => ACCESSORY.test(w)
-    const at = tail.findIndex((w, i) => isPart(w) && (i < 2 || i >= tail.length - 3))
-    if (at >= 0) {
-      const abs = Math.max(...ends) + 1 + at
-      const included = toks.slice(Math.max(0, abs - 4), abs).some((w) => /^(with|w|includes?|including|plus|and|bundle|bundled|free)$/.test(w))
-      if (!included) {
-        return decide('AMBIGUOUS', `The title ends like a part or accessory ("${tail[at]}"), so it may not be the product itself.`, ['Part words next to the model name often mean a replacement part or accessory, not the product.'], [
-          ...ev,
-          { attribute: 'accessory wording', value: tail[at], effect: 'conflicts', from: 'title' },
-        ])
-      }
-    }
+    const part = partVerdict(t, toks, ends, truncated)
+    if (part) return part
   }
   if (missingCodes.length) {
     const c = missingCodes.map((x) => x.text.toUpperCase()).join(', ')
@@ -499,7 +555,7 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
   // --- variant dimensions (storage, memory, generation, size)
   const notes: string[] = []
   let unstated = false
-  for (const key of ['storage', 'memory', 'generation', 'size', 'heatsink'] as const) {
+  for (const key of ['storage', 'memory', 'generation', 'size', 'heatsink', 'connector'] as const) {
     const want = target.variant[key]
     if (!want) continue
     const have = attrs[key]
@@ -523,6 +579,8 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
 
   // --- bundles, unknown words after the model name, trim levels, missing brand
   const caveats: string[] = []
+  const caseCaveat = caseOnlyCaveat(toks, t)
+  if (caseCaveat) caveats.push(caseCaveat)
   const bundle = t.match(BUNDLE)
   if (bundle) caveats.push(`sold with extras ("${bundle[0]}")`)
   const end = Math.max(...ends, -1)
@@ -535,6 +593,7 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
     caveats.push(`the title adds "${adj}" after the model name, which may mark a different version`)
   }
   if (brandMissing) caveats.push(`the brand "${spec.brand}" is not stated`)
+  if (truncated) caveats.push('the title looks cut off, so details may be missing')
   if (unstated) caveats.push(notes.join(' and '))
   if (!hasModelCode(spec)) caveats.push('no model code is stated to confirm the exact model')
 

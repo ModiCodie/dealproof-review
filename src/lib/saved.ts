@@ -109,7 +109,7 @@ function parseGeneric(raw: Record<string, unknown>): GenericTarget | null {
   const spec: GenericSpec = { title, identity, brand: brand || null, trim: trim ? trim.split(' ').slice(0, 2) : [], pins }
   return { family: GENERIC, variant, spec }
 }
-const DIM_KEYS = ['storage', 'memory', 'generation', 'size', 'heatsink']
+const DIM_KEYS = ['storage', 'memory', 'generation', 'size', 'heatsink', 'connector']
 
 /**
  * Validate a stored row. A row we cannot make sense of (unknown family, a

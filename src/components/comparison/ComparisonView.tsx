@@ -63,8 +63,12 @@ const CONDITION_LABEL: Record<Condition, string> = {
   used: 'Used',
   refurbished: 'Refurbished',
   open_box: 'Open-box',
+  defective: 'Defective or for parts',
+  incomplete: 'Incomplete product',
   unknown: 'Condition unknown',
 }
+/** A cut-off "not working ..." is shown as possibly defective: the title does not say what is wrong. */
+const conditionLabel = (c: { value: Condition; uncertain?: boolean }) => (c.value === 'defective' && c.uncertain ? 'Possibly defective' : CONDITION_LABEL[c.value])
 const AVAILABILITY_LABEL: Record<Availability, string> = {
   in_stock: 'In stock',
   out_of_stock: 'Out of stock',
@@ -96,8 +100,9 @@ export function ComparisonView({
   const [title, ...variantParts] = targetLabel(target).split(' · ')
   const observedAt = comparison.sourceScrapedAt
   const otherVariants = comparison.differentVariants.reduce((n, g) => n + g.offers.length, 0)
-  const needsLook = comparison.priceCheck.length + comparison.ambiguous.length
-  const notComparable = otherVariants + comparison.secondHand.length + comparison.rejected.length
+  const general = comparison.target.family === 'generic'
+  const needsLook = comparison.priceCheck.length + comparison.ambiguous.length + comparison.unknownCondition.length + comparison.needsConfig.length
+  const notComparable = otherVariants + comparison.secondHand.length + comparison.defective.length + comparison.rejected.length
 
   return (
     <div data-testid="comparison" className="space-y-6">
@@ -156,6 +161,10 @@ export function ComparisonView({
         <Notice testId="cannot-compare" tone="caution" icon={TriangleAlert} role="note" title="DealProof can't compare these safely yet">
           {comparison.limitation} The listings found are shown below, unsorted by product, with no lowest price.
         </Notice>
+      ) : !comparison.priceSummary.reliable ? (
+        <Notice testId="price-unreliable" tone="caution" icon={TriangleAlert} role="note" title="No reliable lowest price">
+          {comparison.priceSummary.reason} Prices below are feed-reported, not checked at checkout.
+        </Notice>
       ) : (
         <PriceOverview comparison={comparison} observedAt={observedAt} />
       )}
@@ -183,10 +192,12 @@ export function ComparisonView({
       <Section
         testId="section-comparable"
         title="Comparable offers"
-        hint="Titles name the same model and variant, new or condition not stated, price not flagged. Lowest price first. Condition, seller and final checkout cost can still differ."
+        hint={general
+          ? 'Titles name the same model and variant, say the item is new, and leave no configuration open. Lowest price first. Prices are feed-reported; seller and final checkout cost can still differ.'
+          : 'Titles name the same model and variant, new or condition not stated, price not flagged. Lowest price first. Condition, seller and final checkout cost can still differ.'}
         offers={comparison.comparable}
         observedAt={observedAt}
-        empty="No listings could be placed here."
+        empty={general ? 'No listing is confirmed as new in a stated configuration.' : 'No listings could be placed here.'}
         defaultOpen
       />
 
@@ -203,6 +214,22 @@ export function ComparisonView({
             observedAt={observedAt}
             tone="caution"
             defaultOpen
+          />
+          <Section
+            testId="section-unknowncondition"
+            title="Condition not stated"
+            hint="Same product, but the listing does not say whether it is new, used or refurbished. Not priced as new: shown for reference, not as a comparable lowest price."
+            offers={comparison.unknownCondition}
+            observedAt={observedAt}
+            tone="caution"
+          />
+          <Section
+            testId="section-needsconfig"
+            title="Configuration not stated"
+            hint="Other listings show this product comes in different configurations (for example USB-C or Lightning, or another capacity), and these titles do not say which one. Check before comparing prices."
+            offers={comparison.needsConfig}
+            observedAt={observedAt}
+            tone="caution"
           />
           <Section
             testId="section-ambiguous"
@@ -231,6 +258,13 @@ export function ComparisonView({
             title="Used, refurbished or open-box"
             hint="Titles name the same model and variant, but not new, so not compared with new prices."
             offers={comparison.secondHand}
+            observedAt={observedAt}
+          />
+          <Section
+            testId="section-defective"
+            title="Defective, for parts or incomplete"
+            hint="Broken, for parts, or sold without part of the product (for example earbuds only, or no case). Never a normal full-product price."
+            offers={comparison.defective}
             observedAt={observedAt}
           />
           <Section
@@ -306,7 +340,7 @@ function PriceOverview({ comparison, observedAt }: { comparison: Comparison; obs
       )}
 
       <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-3" data-testid="cheapest-details">
-        <Fact label="Condition">{CONDITION_LABEL[o.condition.value]}</Fact>
+        <Fact label="Condition">{conditionLabel(o.condition)}</Fact>
         <Fact label="Availability">{AVAILABILITY_LABEL[o.availability]}</Fact>
         <Fact label="Shipping">{o.shipping ?? 'Not provided'}</Fact>
         <Fact label="Price observed">{formatObserved(observedAt)}</Fact>
@@ -479,7 +513,7 @@ function OfferRow({ a, observedAt, hideSummary }: { a: OfferAnalysis; observedAt
         </p>
         <p className="col-span-2 text-muted-foreground md:col-span-1">
           {a.condition.value !== 'unknown' && <span className="text-xs md:hidden">Condition: </span>}
-          <span className={a.condition.value === 'unknown' ? undefined : 'text-foreground'}>{CONDITION_LABEL[a.condition.value]}</span>
+          <span className={a.condition.value === 'unknown' ? undefined : 'text-foreground'}>{conditionLabel(a.condition)}</span>
         </p>
 
         <div className="col-span-2 space-y-1.5 md:col-span-1">
@@ -521,7 +555,7 @@ function OfferRow({ a, observedAt, hideSummary }: { a: OfferAnalysis; observedAt
               <span className="text-muted-foreground"> ({a.seller.evidence})</span>
             </p>
             <p>
-              Condition: {CONDITION_LABEL[a.condition.value]}
+              Condition: {conditionLabel(a.condition)}
               {a.condition.evidence ? <span className="text-muted-foreground"> ({a.condition.evidence})</span> : null}
             </p>
             <p>Availability: {AVAILABILITY_LABEL[a.availability]}</p>

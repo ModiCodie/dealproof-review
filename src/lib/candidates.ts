@@ -23,11 +23,15 @@ export function cleanTitle(raw: string | null): string {
   return out.length > 110 ? `${out.slice(0, 107).trimEnd()}...` : out
 }
 
+const sameTitleKey = (t: string) => t.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+
 export type Fit = 'fits' | 'unclear' | 'different'
 
 export interface CandidateView {
-  /** Position in the original candidate list (stable id). */
+  /** Position in the original candidate list (stable id). For merged groups, the first of them. */
   index: number
+  /** Every original group this choice stands for (more than one only when their cleaned titles are identical). */
+  indices: number[]
   title: string
   offers: number
   fit: Fit
@@ -44,19 +48,31 @@ export function viewCandidates(query: string, candidates: ProductCandidate[]): C
   const probe: GenericTarget = { family: 'generic', variant: { ...spec.pins }, spec }
   const vague = identityLevel(probe.spec) === 'insufficient'
   const out: CandidateView[] = []
+  const byTitle = new Map<string, CandidateView>()
   candidates.forEach((c, index) => {
     if (c.offers.length === 0) return
     const title = cleanTitle(c.title)
+    // Two groups are one choice only when their titles are the same after cleaning. Similar titles are NOT merged:
+    // "AirPods Pro" and "AirPods Pro with MagSafe Case" can be different generations or configurations.
+    const same = byTitle.get(sameTitleKey(title))
+    if (same) {
+      same.indices.push(index)
+      same.offers += c.offerCount || c.offers.length
+      return
+    }
     const d = classifyGeneric(probe, title)
     const fit: Fit = vague ? 'unclear' : d.class === 'EXACT' || d.class === 'LIKELY' ? 'fits' : d.class === 'AMBIGUOUS' ? 'unclear' : 'different'
-    out.push({
+    const view: CandidateView = {
       index,
+      indices: [index],
       title,
       offers: c.offerCount || c.offers.length,
       fit,
       note: vague ? 'Your search is general, so nothing can be confirmed until you pick one.' : fit === 'fits' ? null : d.summary,
       feedLabel: c.conditionLabel,
-    })
+    }
+    byTitle.set(sameTitleKey(title), view)
+    out.push(view)
   })
   return out
 }
@@ -83,4 +99,14 @@ export function targetForCandidate(query: string, candidate: ProductCandidate, o
     }
   }
   return { target: makeGenericTarget(spec, offerTitles), refined }
+}
+
+/** The listings that belong to a choice: its own group's offers, each of which is still judged by its own title. */
+export function offersForView(view: CandidateView, candidates: ProductCandidate[]): ProductCandidate['offers'] {
+  return view.indices.flatMap((i) => candidates[i]?.offers ?? [])
+}
+
+/** True when the search names a specific product but no group's own title confirms it. */
+export function noneConfirmed(views: CandidateView[]): boolean {
+  return views.length > 0 && views.every((v) => v.fit !== 'fits')
 }

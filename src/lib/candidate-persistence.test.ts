@@ -19,7 +19,7 @@ const compare = (f: ReturnType<typeof fx>, query: string, pick: number) => {
   const { target } = targetForCandidate(query, f.candidates[pick], offers.map((o) => o.title))
   return { target, cmp: buildComparison(target, offers, f.source.scrapedAt) }
 }
-const priced = (c: Comparison) => [...c.comparable, ...c.priceCheck].map((a) => a.offer.title ?? '')
+const priced = (c: Comparison) => [...c.comparable, ...c.priceCheck, ...c.unknownCondition].map((a) => a.offer.title ?? '')
 
 describe('selecting a candidate', () => {
   const A = fx(airpods)

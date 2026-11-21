@@ -38,16 +38,16 @@ def write(name, query, cands):
 ap2 = 'Apple AirPods Pro 2nd Generation Wireless Earbuds'
 write('airpods.json', 'Apple AirPods Pro 2', [
   cand(9001, 'Apple AirPods Pro (2nd Generation) Wireless Earbuds with MagSafe Charging Case', [
-    offer('north', 189.99, ap2 + ' with MagSafe Case (USB-C)'),
-    offer('blue', 194.5, 'Apple AirPods Pro 2 Wireless Earbuds, MQD83AM/A'),
-    offer('harbor', 199.0, 'Apple AirPods Pro (2nd generation) with MagSafe Charging Case'),
-    offer('summit', 204.99, 'AirPods Pro 2nd Gen Apple Bluetooth Earbuds'),
-    offer('lumen', 209.0, 'Apple AirPods Pro 2 USB-C Active Noise Cancelling Earbuds'),
+    offer('north', 189.99, ap2 + ' with MagSafe Case (USB-C) - New'),
+    offer('blue', 194.5, 'Apple AirPods Pro 2 Wireless Earbuds, MQD83AM/A - New'),
+    offer('harbor', 199.0, 'Apple AirPods Pro (2nd generation) with MagSafe Charging Case - New'),
+    offer('summit', 204.99, 'AirPods Pro 2nd Gen Apple Bluetooth Earbuds - New'),
+    offer('lumen', 209.0, 'Apple AirPods Pro 2 USB-C Active Noise Cancelling Earbuds - New'),
     offer('orchard', 214.95, 'Apple AirPods Pro 2nd Generation Earbuds - New', delivery=None),
     offer('pine', 219.0, 'Apple AirPods Pro 2 Wireless Earbuds', stock='Out of stock'),
     offer('delta', 229.99, 'Apple AirPods Pro (2nd Generation)'),
-    offer('north', 189.99, ap2 + ' with MagSafe Case (USB-C)'),            # exact duplicate listing
-    offer('kite', 59.0, 'Apple AirPods Pro 2 Wireless Earbuds (2nd Generation)'),   # far below the others
+    offer('north', 189.99, ap2 + ' with MagSafe Case (USB-C) - New'),            # exact duplicate listing
+    offer('kite', 59.0, 'Apple AirPods Pro 2 Wireless Earbuds (2nd Generation) - New'),   # far below the others
     offer('ember', 129.0, 'Apple AirPods Pro 1st Generation Wireless Earbuds'),
     offer('harbor', 124.0, 'Apple AirPods Pro (1st Gen) with Wireless Charging Case'),
     offer('blue', 449.0, 'Apple AirPods Max Wireless Over-Ear Headphones'),
@@ -73,15 +73,15 @@ write('airpods.json', 'Apple AirPods Pro 2', [
 sn = 'WD_BLACK SN850X NVMe SSD'
 write('ssd.json', 'WD Black SN850X 2TB', [
   cand(9101, 'WD_BLACK 2TB SN850X NVMe Internal Gaming SSD Solid State Drive', [
-    offer('north', 149.99, sn + ' 2TB'),
-    offer('blue', 154.0, 'Western Digital WD Black SN850X 2TB PCIe Gen4 M.2 2280 Internal SSD'),
-    offer('harbor', 159.5, 'WD_BLACK SN850X 2TB NVMe M.2 SSD WDS200T2X0E'),
-    offer('summit', 162.0, 'WD Black SN850X 2 TB Internal Gaming SSD'),
-    offer('lumen', 165.99, 'WD_BLACK SN850X 2TB Gaming SSD, Gen4 PCIe'),
-    offer('orchard', 171.0, 'Western Digital WD_BLACK 2TB SN850X NVMe SSD'),
+    offer('north', 149.99, sn + ' 2TB - New'),
+    offer('blue', 154.0, 'Western Digital WD Black SN850X 2TB PCIe Gen4 M.2 2280 Internal SSD New'),
+    offer('harbor', 159.5, 'WD_BLACK SN850X 2TB NVMe M.2 SSD WDS200T2X0E - New'),
+    offer('summit', 162.0, 'WD Black SN850X 2 TB Internal Gaming SSD New'),
+    offer('lumen', 165.99, 'WD_BLACK SN850X 2TB Gaming SSD, Gen4 PCIe New'),
+    offer('orchard', 171.0, 'Western Digital WD_BLACK 2TB SN850X NVMe SSD (New)'),
     offer('pine', 178.0, 'WD_BLACK SN850X 2TB SSD with Heatsink'),
     offer('delta', 181.0, 'WD_BLACK SN850X 2TB NVMe SSD with Heatsink'),
-    offer('kite', 89.0, 'WD_BLACK SN850X 2TB NVMe M.2 SSD'),
+    offer('kite', 89.0, 'WD_BLACK SN850X 2TB NVMe M.2 SSD - New'),
     offer('north', 89.99, 'WD_BLACK SN850X 1TB NVMe SSD'),
     offer('blue', 94.0, 'Western Digital WD Black SN850X 1TB Internal SSD'),
     offer('harbor', 99.5, 'WD_BLACK SN850X 1TB M.2 SSD'),
@@ -103,12 +103,12 @@ write('ssd.json', 'WD Black SN850X 2TB', [
 dy = 'Dyson V15 Detect Cordless Vacuum Cleaner'
 write('dyson.json', 'Dyson V15 Detect', [
   cand(9201, 'Dyson V15 Detect Cordless Vacuum Cleaner', [
-    offer('north', 649.99, dy + ' Yellow/Nickel'),
-    offer('blue', 659.0, dy),
-    offer('harbor', 664.95, 'Dyson V15 Detect Cordless Stick Vacuum'),
-    offer('summit', 669.0, 'Dyson V15 Detect Vacuum Cleaner - Yellow'),
-    offer('lumen', 674.0, 'Dyson V15 Detect Cordless Vacuum'),
-    offer('orchard', 679.99, 'Dyson V15 Detect Cordless Vacuum Cleaner, Nickel'),
+    offer('north', 649.99, dy + ' Yellow/Nickel - New'),
+    offer('blue', 659.0, dy + ' - New'),
+    offer('harbor', 664.95, 'Dyson V15 Detect Cordless Stick Vacuum - New'),
+    offer('summit', 669.0, 'Dyson V15 Detect Vacuum Cleaner - Yellow - New'),
+    offer('lumen', 674.0, 'Dyson V15 Detect Cordless Vacuum - New'),
+    offer('orchard', 679.99, 'Dyson V15 Detect Cordless Vacuum Cleaner, Nickel, New'),
     offer('pine', 689.0, 'Dyson V15 Detect Absolute Cordless Vacuum Cleaner'),
     offer('delta', 699.0, 'Dyson V15 Detect + Extra Attachments Bundle'),
     offer('kite', 559.0, 'Dyson V12 Detect Slim Cordless Vacuum Cleaner'),
