@@ -1,0 +1,37 @@
+┌  Deploying DeepSpace app
+│
+●  App: dealproof-review
+│
+●  Id: app_01M7Z981PV35N5RAXM3RM7SRR4
+│
+●  Secrets: prd (1 secret)
+│
+●  App secrets: PRICESAPI_KEY
+Building...
+Built (3s)
+Collecting assets...
+Collected 24 assets
+│
+●  DO manifest: 6 binding(s)
+│
+●  Custom bindings: NATIVE_AUTH_REDIRECT_URIS (plain_text)
+This app's source is unclaimed — this deploy's release claims GitHub source (modicodie/dealproof-review) for it, permanently. DeepSpace source verbs (push/pull/clone/workspace) will refuse from now on; if this checkout's GitHub remote is accidental, deploy as a fresh app instead (`deepspace app init --new-id`).
+│
+●  GitHub source: shipping the working tree of main (clean). GitHub-source releases record no commit lineage.
+Deploying dealproof-review...
+Checking which assets are already uploaded...
+│
+●  Assets: 24 file(s), uploading 24 (856 KiB); the rest are already stored
+│
+●  Uploaded 24 file(s) in 1s
+Deploying dealproof-review...
+│
+●  Platform commit: 11s
+Waiting for the edge to serve this release...
+Deployed! (edge + data plane confirmed in 3s)
+│
+◆  Live at: https://dealproof-review.app.space
+│
+└  Done
+
+deploy exit code: 0
