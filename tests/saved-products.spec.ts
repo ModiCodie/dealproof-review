@@ -411,7 +411,7 @@ test.describe('saved products (real record storage, mocked prices)', () => {
     await expect(reopened).toBeVisible({ timeout: 20_000 })
     await expect(reopened.getByTestId('cheapest-match')).toContainText('Likely the same, some details missing')
     await expect(reopened.getByTestId('cheapest-match')).toContainText('Not confirmed as the exact variant')
-    await expect(reopened).not.toContainText('Same model and variant')
+    await expect(reopened).not.toContainText('Title names the same model and variant')
     await clearOwn(a.page)
   })
 

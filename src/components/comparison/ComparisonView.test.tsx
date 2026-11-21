@@ -21,7 +21,7 @@ describe('ComparisonView (rendered from real fixtures)', () => {
       expect(samsungHtml).toContain(label)
     }
     expect(samsungHtml).toContain('Likely the same, some details missing')
-    expect(sonyHtml).toContain('Same model and variant')
+    expect(sonyHtml).toContain('Title names the same model and variant')
     expect(samsungHtml).toContain('Different variant')
     expect(samsungHtml).toContain('Availability: Backordered')
   })
@@ -62,14 +62,14 @@ describe('ComparisonView (rendered from real fixtures)', () => {
     const h = headline(samsungHtml)
     expect(h).toContain('Likely the same, some details missing')
     expect(h).toContain('Not confirmed as the exact variant')
-    expect(h).not.toContain('Same model and variant')
+    expect(h).not.toContain('Title names the same model and variant')
     // the reference offer is also a likely match and says so
     expect(h).toContain('likely match, not confirmed')
   })
 
   it('an exact headline match does not claim uncertainty', () => {
     const h = headline(sonyHtml)
-    expect(h).toContain('Same model and variant')
+    expect(h).toContain('Title names the same model and variant')
     expect(h).not.toContain('Not confirmed as the exact variant')
   })
 

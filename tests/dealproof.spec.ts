@@ -118,7 +118,7 @@ test.describe('DealProof comparison UI', () => {
     expect(await section.getByTestId('offer').filter({ hasText: 'Condition: Condition unknown' }).count()).toBeGreaterThan(20)
     // missing shipping is never turned into "free"
     expect(await section.getByTestId('offer').filter({ hasText: /Shipping: Not provided/ }).filter({ hasText: /Shipping: (free|\$0)/i }).count()).toBe(0)
-    await expect(card).toContainText('Same model and variant')
+    await expect(card).toContainText('Title names the same model and variant')
     await card.getByText('Details', { exact: true }).click()
     await card.getByText('Why this product-match decision?').click()
     await expect(card).toContainText('Title names WH-1000XM5')
@@ -172,7 +172,7 @@ test.describe('DealProof comparison UI', () => {
     await expect(p.getByTestId('section-comparable')).toBeVisible()
     // matching listings are now the Mac edition; the standard ones become "different variant"
     const matching = p.getByTestId('section-comparable')
-    const exact = matching.getByTestId('offer').filter({ hasText: 'Same model and variant' }).first()
+    const exact = matching.getByTestId('offer').filter({ hasText: 'Title names the same model and variant' }).first()
     await expect(exact).toContainText(/for mac/i)
     // listings that name no edition are only "likely" for the Mac edition, and say so
     await expect(matching.getByTestId('offer').filter({ hasText: "doesn't say whether it is the for Mac edition" }).first()).toBeVisible()

@@ -108,7 +108,7 @@ export const FAMILIES: Record<FamilyId, FamilyInfo> = {
 
 export function targetLabel(t: ProductTarget): string {
   if (t.family === 'generic') {
-    const parts = [t.spec.title.length > 70 ? `${t.spec.title.slice(0, 67)}...` : t.spec.title]
+    const parts = [t.spec.title.length > 110 ? `${t.spec.title.slice(0, 107)}...` : t.spec.title]
     for (const [k, v] of Object.entries(t.variant)) parts.push(optionLabel(k, v))
     return parts.join(' · ')
   }
@@ -471,7 +471,7 @@ function classifySamsung(title: string | null, target: FamilyTarget): MatchDecis
   if (!heatsink) {
     return decide('LIKELY', `Probably the ${wantCap} model, but the listing doesn't say whether it has a heatsink.`, ['Model and size match; the heatsink version is not stated.', ...codeNote], ev)
   }
-  return decide('EXACT', `Same model and variant: 990 PRO ${wantCap}, ${wantHs === 'with' ? 'with' : 'without'} heatsink.`, ['Model, size and heatsink are stated and match.'], ev)
+  return decide('EXACT', `Title names the same model and variant: 990 PRO ${wantCap}, ${wantHs === 'with' ? 'with' : 'without'} heatsink.`, ['Model, size and heatsink are stated and match.'], ev)
 }
 
 // ---------------------------------------------------------------------------

@@ -48,13 +48,21 @@ export function validateQuery(raw: unknown): QueryValidation {
 }
 
 /**
- * What makes two queries "the same search": letters and digits only, lower case.
- * "Sony WH-1000XM5", "sony wh1000xm5" and "SONY  WH 1000 XM5" all share one cache
- * entry (and one paid search), so punctuation and spacing cannot be used to
- * buy a fresh search of the same product. Different words stay different.
+ * What makes two queries "the same search". Case, repeated spaces and punctuation
+ * are ignored, and a hyphen/underscore/apostrophe joining a letter to a letter or
+ * digit is dropped, so "Sony WH-1000XM5", "sony wh1000xm5" and " SONY  WH-1000XM5 "
+ * share one cache entry and one paid search. Spaces and decimal points between
+ * words and numbers are kept: "Galaxy A5 5G" and "Galaxy A55G", or "27.5 inch" and
+ * "275 inch", are different products and must never share a cache entry.
+ * (A different spelling only costs that user one more of their own daily searches.)
  */
 export function canonicalQuery(query: string): string {
-  return query.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+  return query
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/(?<=\p{L})[-_'\u2019\u2013\u2014\u2212]+(?=[\p{L}\p{N}])|(?<=\p{N})[-_'\u2019\u2013\u2014\u2212]+(?=\p{L})/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
 }
 
 /** Cache key: the same canonical query + market share one entry. */

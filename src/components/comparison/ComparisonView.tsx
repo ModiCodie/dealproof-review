@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils'
 
 /** Full labels: used where there is room (price overview, offer details). */
 const MATCH_LABEL: Record<MatchClass, string> = {
-  EXACT: 'Same model and variant',
+  EXACT: 'Title names the same model and variant',
   LIKELY: 'Likely the same, some details missing',
   AMBIGUOUS: 'Cannot tell from the listing',
   DIFFERENT_VARIANT: 'Different variant',
@@ -38,7 +38,7 @@ const MATCH_LABEL: Record<MatchClass, string> = {
 }
 /** Compact labels for table rows. The full label is the pill's tooltip. */
 const MATCH_SHORT: Record<MatchClass, string> = {
-  EXACT: 'Exact match',
+  EXACT: 'Title match',
   LIKELY: 'Likely match',
   AMBIGUOUS: 'Can’t tell',
   DIFFERENT_VARIANT: 'Different variant',
@@ -183,7 +183,7 @@ export function ComparisonView({
       <Section
         testId="section-comparable"
         title="Comparable offers"
-        hint="Same model and variant, new or condition not stated, price not flagged. Lowest price first. Condition, seller and final checkout cost can still differ."
+        hint="Titles name the same model and variant, new or condition not stated, price not flagged. Lowest price first. Condition, seller and final checkout cost can still differ."
         offers={comparison.comparable}
         observedAt={observedAt}
         empty="No listings could be placed here."
@@ -229,7 +229,7 @@ export function ComparisonView({
           <Section
             testId="section-secondhand"
             title="Used, refurbished or open-box"
-            hint="Same model and variant, but not new, so not compared with new prices."
+            hint="Titles name the same model and variant, but not new, so not compared with new prices."
             offers={comparison.secondHand}
             observedAt={observedAt}
           />

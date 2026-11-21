@@ -394,7 +394,7 @@ describe('normalization of missing / uncertain data', () => {
 })
 
 describe('general search: query canonicalization, cache and quota', () => {
-  const lookalikes = ['Sony WH-1000XM5', 'sony wh1000xm5', 'SONY  WH 1000 XM5', ' Sony WH–1000XM5 ']
+  const lookalikes = ['Sony WH-1000XM5', 'sony wh1000xm5', 'SONY  WH_1000XM5', ' Sony WH–1000XM5 ', 'sony wh-1000xm5!']
 
   it('trivial variations of the same text share one cache entry and one paid search', async () => {
     const { run, fetchImpl, tools } = setup()
@@ -402,6 +402,14 @@ describe('general search: query canonicalization, cache and quota', () => {
     expect(fetchImpl.calls).toHaveLength(1)
     expect(tools.dump('search_cache')).toHaveLength(1)
     expect(tools.dump('usage_claims').filter((r) => r.data.kind === 'user')).toHaveLength(1)
+  })
+  it('never merges materially different products: spacing and decimals inside a name matter', () => {
+    const k = (q: string) => cacheKey('us', q)
+    expect(k('Samsung Galaxy A5 5G')).not.toBe(k('Samsung Galaxy A55G'))
+    expect(k('Dell 27.5 inch monitor')).not.toBe(k('Dell 275 inch monitor'))
+    expect(k('Lens 12-24mm')).not.toBe(k('Lens 1224mm'))
+    expect(k('Sony WH 1000 XM5')).not.toBe(k('Sony WH-1000XM5')) // a spelling variant costs one extra search, never a wrong merge
+    expect(k('AirPods Pro 2')).not.toBe(k('AirPods Pro 22'))
   })
   it('different words stay different products, even when the letters are similar', () => {
     expect(cacheKey('us', 'Dyson V15 Detect')).not.toBe(cacheKey('us', 'Dyson V15 Detect Absolute'))

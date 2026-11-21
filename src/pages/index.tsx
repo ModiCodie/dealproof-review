@@ -84,7 +84,7 @@ export default function Landing() {
               <ul className="mt-4 space-y-3">
                 <li className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3">
                   <span className="min-w-0 text-sm text-foreground">“…990 PRO SSD 2TB (no heatsink)”</span>
-                  <Pill tone="ok">Exact match</Pill>
+                  <Pill tone="ok">Title match</Pill>
                 </li>
                 <li className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 p-3">
                   <span className="min-w-0 text-sm text-foreground">“…990 PRO 2TB NVMe M.2 SSD”</span>

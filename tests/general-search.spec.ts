@@ -81,6 +81,11 @@ test.describe('general product search', () => {
     // choosing another group changes the target; nothing new is searched
     await p.getByTestId('candidate-1').click()
     await expect(p.getByTestId('candidate-1')).toHaveAttribute('aria-checked', 'true')
+    await expect(p.getByTestId('pick-mismatch')).toContainText('This isn’t the product you searched for')
+    await expect(p.getByTestId('comparison')).toHaveCount(0) // never one product's name over another's offers
+    await p.getByTestId('candidate-0').click()
+    await expect(p.getByTestId('comparison')).toBeVisible()
+    await expect(p.getByTestId('pick-mismatch')).toHaveCount(0)
     expect(n.searches).toHaveLength(1)
     expect(n.pricesapi).toEqual([])
   })

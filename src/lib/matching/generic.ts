@@ -168,7 +168,8 @@ export function identityLevel(spec: GenericSpec): 'sufficient' | 'insufficient' 
 
 /** Only a model code can confirm a match. A name-only identity is capped at LIKELY. */
 export function hasModelCode(spec: GenericSpec): boolean {
-  return identityTokens(spec).some((x) => x.kind === 'code')
+  // A bare number ("737") is shared by unrelated products of one brand (a charger and a power bank), so it cannot confirm a model.
+  return identityTokens(spec).some((x) => x.kind === 'code' && /[a-z]/.test(x.text))
 }
 
 /**
@@ -202,6 +203,11 @@ export function buildGenericSpec(query: string, candidateTitle: string | null): 
     if (!w) continue
     if (/^[a-z]+$/.test(w) && (STOP.has(w) || COLORS.has(w) || FILLER.has(w))) continue
     kept.push(w)
+  }
+  // "AirPods Pro 1st generation": a generation stated in the search IS the model number when nothing else numbers the model.
+  if (qa.generation.length === 1 && !kept.some((w) => /\d/.test(w))) {
+    kept.push(qa.generation[0])
+    delete pins.generation
   }
   const identity = kept.join(' ')
   const words = kept.filter((w) => /^[a-z][a-z-]*$/.test(w))
@@ -295,7 +301,7 @@ export function discoverDimensions(spec: GenericSpec, titles: (string | null)[])
       const options = [{ value: 'with', label: optionLabel(key, 'with') }, { value: 'without', label: optionLabel(key, 'without') }]
       dims.push({
         key, label: DIM_LABEL[key], options, default: pin ?? 'without',
-        note: pin ? 'Pre-selected from your search.' : 'Pre-selected: the version without a heatsink. Listings that do not say are marked "likely".',
+        note: pin ? 'taken from your search.' : 'set to the version without a heatsink. Listings that do not say are marked "likely".',
       })
       continue
     }
@@ -311,8 +317,8 @@ export function discoverDimensions(spec: GenericSpec, titles: (string | null)[])
       options,
       default: def,
       note: pin
-        ? `Pre-selected from ${spec.pins[key] && !normalizeText(spec.identity).includes(pin.toLowerCase()) ? 'the product you chose' : 'your search'}.`
-        : `Pre-selected because most listings say ${optionLabel(key, def)}. Check it is the one you mean.`,
+        ? `${spec.pins[key] && !normalizeText(spec.identity).includes(pin.toLowerCase()) ? 'taken from the product you chose' : 'taken from your search'}.`
+        : `set to ${optionLabel(key, def)}, the most common in the listings. Check it is the one you mean.`,
     })
   }
   return dims
@@ -387,6 +393,23 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
         ...ev,
         { attribute: 'compatibility wording', value: compat[0], effect: 'conflicts', from: 'title' },
       ])
+    }
+  }
+  if (ends.length) {
+    // Part words right after the model ("... V15 Detect Replacement Battery", "... Wall Mount Dock") or ending the title,
+    // unless introduced as an inclusion ("with ... case"): probably a part or accessory, so it is kept out of the comparison.
+    const tail = toks.slice(Math.max(...ends) + 1)
+    const isPart = (w: string) => ACCESSORY.test(w)
+    const at = tail.findIndex((w, i) => isPart(w) && (i < 2 || i >= tail.length - 3))
+    if (at >= 0) {
+      const abs = Math.max(...ends) + 1 + at
+      const included = toks.slice(Math.max(0, abs - 4), abs).some((w) => /^(with|w|includes?|including|plus|and|bundle|bundled|free)$/.test(w))
+      if (!included) {
+        return decide('AMBIGUOUS', `The title ends like a part or accessory ("${tail[at]}"), so it may not be the product itself.`, ['Part words next to the model name often mean a replacement part or accessory, not the product.'], [
+          ...ev,
+          { attribute: 'accessory wording', value: tail[at], effect: 'conflicts', from: 'title' },
+        ])
+      }
     }
   }
   if (missingCodes.length) {
@@ -518,5 +541,5 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
   if (caveats.length) {
     return decide('LIKELY', `Probably the same product, but ${caveats[0]}.`, caveats.map((c) => `Likely, not confirmed: ${c}.`), ev)
   }
-  return decide('EXACT', `Same model${Object.keys(target.variant).length ? ' and variant' : ''}: ${codes.map((c) => c.text.toUpperCase()).join(' ')}.`, ['The model code and every chosen variant attribute are stated in the title and agree.'], ev)
+  return decide('EXACT', `Title names the same model${Object.keys(target.variant).length ? ' and variant' : ''}: ${codes.map((c) => c.text.toUpperCase()).join(' ')}.`, ['The model code and every chosen variant attribute are stated in the listing title and agree. This is title text only, not a verified product identity.'], ev)
 }

@@ -70,6 +70,9 @@ test('general shots', async ({ users }) => {
     await full(p, '03-generic-comparison', size)
     await p.getByTestId('candidate-picker').scrollIntoViewIfNeeded()
     await p.getByTestId('candidate-picker').screenshot({ path: `${OUT}/02-candidate-selection-${size}.png` })
+    await p.getByTestId('candidate-1').click() // a group the search rules out: nothing is compared
+    await expect(p.getByTestId('pick-mismatch')).toBeVisible()
+    await full(p, '11-pick-mismatch', size)
 
     await mock(p, 'vague')
     await go(p, 'Dyson cordless vacuum')

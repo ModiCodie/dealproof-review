@@ -19,7 +19,7 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Check, Clock, FlaskConical, Lock, Package, Search as SearchIcon, SearchX, Zap } from 'lucide-react'
+import { Check, Clock, FlaskConical, Info, Lock, Package, Search as SearchIcon, SearchX, Zap } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
 import { searchProducts } from '@/lib/api'
 import { ComparisonView, formatPrice } from '@/components/comparison/ComparisonView'
@@ -279,7 +279,7 @@ function ActionCard({ icon, title, badge, body, primary, children }: { icon: Rea
 /** Shown before any result: what the labels in a comparison mean, in one glance. */
 function Legend() {
   const items: { tone: 'ok' | 'likely' | 'variant' | 'caution'; label: string; text: string }[] = [
-    { tone: 'ok', label: 'Exact match', text: 'The listing names your model and every variant detail you chose.' },
+    { tone: 'ok', label: 'Title match', text: 'The listing title names your model and every variant detail you chose. Based on the title only, not verified.' },
     { tone: 'likely', label: 'Likely match', text: 'Probably the right product, but the listing leaves a detail out.' },
     { tone: 'variant', label: 'Different variant', text: 'Same product family, other configuration. Kept out of your comparison.' },
     { tone: 'caution', label: 'Price unusually low', text: 'Far below other sellers. Worth a closer look before you rely on it.' },
@@ -397,11 +397,20 @@ function Compared({ query, candidates, scrapedAt, isSample }: { query: string; c
 function GeneralCompared({ query, candidates, offers, scrapedAt }: { query: string; candidates: ProductCandidate[]; offers: NormalizedOffer[]; scrapedAt: string | null }) {
   const views = useMemo(() => viewCandidates(query, candidates), [query, candidates])
   const [pick, setPick] = useState<number | null>(() => initialPick(views))
-  const chosen = pick === null ? null : candidates[pick]
+  const chosenView = views.find((v) => v.index === pick) ?? null
+  // A group the search text itself rules out is never compared: the search defines the product, so comparing
+  // it would show one product's name above another product's offers.
+  const mismatch = chosenView?.fit === 'different' ? chosenView : null
+  const chosen = pick === null || mismatch ? null : candidates[pick]
   const built = useMemo(() => (chosen ? targetForCandidate(query, chosen, offers.map((o) => o.title)) : null), [query, chosen, offers])
   return (
     <div className="space-y-6" data-testid="general-compare">
       <CandidatePicker views={views} value={pick} onChange={setPick} />
+      {mismatch && (
+        <Notice testId="pick-mismatch" tone="caution" icon={Info} role="note" title="This isn’t the product you searched for">
+          “{mismatch.title}” differs from “{query}”{mismatch.note ? `: ${mismatch.note.replace(/\.$/, '')}` : ''}. Nothing is compared for it, so its offers can’t be mistaken for your product’s. To compare it, search for it by name.
+        </Notice>
+      )}
       {built && chosen && (
         <>
           {built.refined && (
