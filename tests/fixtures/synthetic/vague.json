@@ -1,0 +1,131 @@
+{
+ "_note": "SYNTHETIC: invented retailers, prices and listings for tests. Not PricesAPI data.",
+ "query": "Dyson cordless vacuum",
+ "market": "us",
+ "candidates": [
+  {
+   "pid": 9301,
+   "productRef": {
+    "id": "9301",
+    "idType": "pricesapi",
+    "market": "us"
+   },
+   "catalogId": null,
+   "clusterId": null,
+   "title": "Dyson V15 Detect Cordless Vacuum Cleaner",
+   "headlinePrice": null,
+   "headlineCurrency": null,
+   "conditionLabel": null,
+   "offerCount": 2,
+   "offers": [
+    {
+     "seller": "NorthStar Electronics",
+     "sellerUrl": "https://www.northstar-electronics.example/",
+     "price": 649.99,
+     "currency": "USD",
+     "title": "Dyson V15 Detect Cordless Vacuum Cleaner",
+     "listingUrl": "https://www.northstar-electronics.example/p/dyson-v15-detect-cordless-vacuum-cleaner",
+     "stockText": "In stock",
+     "availability": "in_stock",
+     "deliveryInfo": "Free delivery",
+     "condition": "unknown",
+     "observedAt": null
+    },
+    {
+     "seller": "Bluebird Tech",
+     "sellerUrl": "https://www.bluebirdtech.example/",
+     "price": 659.0,
+     "currency": "USD",
+     "title": "Dyson V15 Detect Cordless Vacuum Cleaner",
+     "listingUrl": "https://www.bluebirdtech.example/p/dyson-v15-detect-cordless-vacuum-cleaner",
+     "stockText": "In stock",
+     "availability": "in_stock",
+     "deliveryInfo": "Free delivery",
+     "condition": "unknown",
+     "observedAt": null
+    }
+   ]
+  },
+  {
+   "pid": 9302,
+   "productRef": {
+    "id": "9302",
+    "idType": "pricesapi",
+    "market": "us"
+   },
+   "catalogId": null,
+   "clusterId": null,
+   "title": "Dyson V8 Cordless Vacuum Cleaner",
+   "headlinePrice": null,
+   "headlineCurrency": null,
+   "conditionLabel": null,
+   "offerCount": 2,
+   "offers": [
+    {
+     "seller": "Harbor Outlet",
+     "sellerUrl": "https://www.harboroutlet.example/",
+     "price": 299.0,
+     "currency": "USD",
+     "title": "Dyson V8 Cordless Vacuum Cleaner",
+     "listingUrl": "https://www.harboroutlet.example/p/dyson-v8-cordless-vacuum-cleaner",
+     "stockText": "In stock",
+     "availability": "in_stock",
+     "deliveryInfo": "Free delivery",
+     "condition": "unknown",
+     "observedAt": null
+    },
+    {
+     "seller": "Summit Gadgets",
+     "sellerUrl": "https://www.summitgadgets.example/",
+     "price": 309.0,
+     "currency": "USD",
+     "title": "Dyson V8 Absolute Cordless Vacuum",
+     "listingUrl": "https://www.summitgadgets.example/p/dyson-v8-absolute-cordless-vacuum",
+     "stockText": "In stock",
+     "availability": "in_stock",
+     "deliveryInfo": "Free delivery",
+     "condition": "unknown",
+     "observedAt": null
+    }
+   ]
+  },
+  {
+   "pid": 9303,
+   "productRef": {
+    "id": "9303",
+    "idType": "pricesapi",
+    "market": "us"
+   },
+   "catalogId": null,
+   "clusterId": null,
+   "title": "Dyson Outsize Cordless Vacuum Cleaner",
+   "headlinePrice": null,
+   "headlineCurrency": null,
+   "conditionLabel": null,
+   "offerCount": 1,
+   "offers": [
+    {
+     "seller": "Lumen Direct",
+     "sellerUrl": "https://www.lumendirect.example/",
+     "price": 549.0,
+     "currency": "USD",
+     "title": "Dyson Outsize Cordless Vacuum",
+     "listingUrl": "https://www.lumendirect.example/p/dyson-outsize-cordless-vacuum",
+     "stockText": "In stock",
+     "availability": "in_stock",
+     "deliveryInfo": "Free delivery",
+     "condition": "unknown",
+     "observedAt": null
+    }
+   ]
+  }
+ ],
+ "source": {
+  "scrapedAt": "2026-11-21T15:00:00.000Z",
+  "upstreamCacheSource": "miss",
+  "upstreamCacheAgeSeconds": null,
+  "servedStale": null,
+  "degraded": null,
+  "upstreamLatencyMs": 21000
+ }
+}

@@ -38,14 +38,36 @@ export function validateQuery(raw: unknown): QueryValidation {
   if (/[\u0000-\u001f\u007f]/.test(query)) {
     return { ok: false, message: 'Search contains unsupported characters.' }
   }
+  if (!/[\p{L}\p{N}]/u.test(query)) {
+    return { ok: false, message: 'Enter a product name or model, not just symbols.' }
+  }
   if (/:\/\//.test(query) || /^www\./i.test(query)) {
     return { ok: false, message: 'Searching by URL is not supported yet. Enter a product name.' }
   }
   return { ok: true, query }
 }
 
-/** Cache key: same query (case/space-insensitive) + market share one entry. */
+/**
+ * What makes two queries "the same search": letters and digits only, lower case.
+ * "Sony WH-1000XM5", "sony wh1000xm5" and "SONY  WH 1000 XM5" all share one cache
+ * entry (and one paid search), so punctuation and spacing cannot be used to
+ * buy a fresh search of the same product. Different words stay different.
+ */
+export function canonicalQuery(query: string): string {
+  return query.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
+/** Cache key: the same canonical query + market share one entry. */
 export function cacheKey(market: string, query: string): string {
+  return `${market}|${canonicalQuery(query)}`
+}
+
+/**
+ * The key older versions wrote (lower-cased query, punctuation kept). Still read,
+ * so results cached before this change keep serving and saved products reopen
+ * their stored data; new writes always use `cacheKey`.
+ */
+export function legacyCacheKey(market: string, query: string): string {
   return `${market}|${query.toLowerCase()}`
 }
 

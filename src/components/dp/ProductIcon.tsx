@@ -1,4 +1,4 @@
-import { Headphones, HardDrive, Mouse } from 'lucide-react'
+import { Headphones, HardDrive, Mouse, Package } from 'lucide-react'
 import type { FamilyId } from '@/lib/matching'
 import { cn } from '@/lib/utils'
 
@@ -9,8 +9,8 @@ const ICONS = {
 } as const
 
 /** A tinted tile with the product category's icon (no product photos: none are licensed for use here). */
-export function ProductIcon({ family, className }: { family: FamilyId; className?: string }) {
-  const Icon = ICONS[family]
+export function ProductIcon({ family, className }: { family: FamilyId | 'generic'; className?: string }) {
+  const Icon = family === 'generic' ? Package : ICONS[family]
   return (
     <span className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary', className)} aria-hidden>
       <Icon className="size-5" />

@@ -26,7 +26,7 @@ import type {
   ProductCandidate,
 } from '../../lib/pricing-types'
 import { loadConfig, type PricingConfig } from './config'
-import { cacheKey, hasOffers, validateQuery } from './normalize'
+import { cacheKey, hasOffers, legacyCacheKey, validateQuery } from './normalize'
 import { searchPricesApi } from './pricesapi'
 import {
   acquireLock,
@@ -90,6 +90,14 @@ export async function readCache(tools: ActionTools, key: string): Promise<{ reco
   return rec ? { recordId: rec.recordId, row: rec.data as CacheRow } : null
 }
 
+/** The cached entry for a query: its current key, else the key older versions used. */
+export async function readCacheForQuery(tools: ActionTools, query: string): Promise<{ recordId: string; row: CacheRow } | null> {
+  const current = await readCache(tools, cacheKey(MARKET, query))
+  if (current) return current
+  const legacy = legacyCacheKey(MARKET, query)
+  return legacy === cacheKey(MARKET, query) ? null : readCache(tools, legacy)
+}
+
 async function writeCache(
   tools: ActionTools,
   existingId: string | null,
@@ -121,7 +129,7 @@ export async function runSearch(rawQuery: unknown, deps: SearchDeps): Promise<Se
     })
 
     // 1. Cache (a hit needs no key and consumes nothing).
-    const cached = await readCache(tools, key)
+    const cached = await readCacheForQuery(tools, query)
     if (cached && cached.row.expiresAtMs > t0) {
       return { success: true, data: { result: toResult(query, cached.row), fromCache: true, quota: await quotaNow() } }
     }
@@ -141,7 +149,7 @@ export async function runSearch(rawQuery: unknown, deps: SearchDeps): Promise<Se
     let globalSlot: string | null = null
     try {
       // Someone may have finished while we waited for the lock.
-      const again = await readCache(tools, key)
+      const again = await readCacheForQuery(tools, query)
       if (again && again.row.expiresAtMs > now()) {
         return { success: true, data: { result: toResult(query, again.row), fromCache: true, quota: await quotaNow() } }
       }

@@ -23,11 +23,39 @@ export type Condition = 'new' | 'used' | 'refurbished' | 'open_box' | 'unknown'
 
 export type FamilyId = 'sony-wh-1000xm5' | 'logitech-mx-master-3s' | 'samsung-990-pro'
 
-/** What the user wants to compare. `variant` holds one value per family dimension. */
-export interface ProductTarget {
+/** A product with hand-written rules (see families.ts). `variant` holds one value per family dimension. */
+export interface FamilyTarget {
   family: FamilyId
   variant: Record<string, string>
 }
+
+/**
+ * Any other product. What identifies it comes from the user's search text plus
+ * the product they picked from the candidates. Nothing here is a verified
+ * product identifier: PricesAPI Search returns no GTIN/UPC/MPN/brand fields.
+ */
+export interface GenericSpec {
+  /** Title of the candidate the user picked. Display only. */
+  title: string
+  /** Normalized identity words/codes/numbers from the search text, e.g. "airpods pro 2". */
+  identity: string
+  /** First identity word when the search had two or more. Missing from a listing: weaker evidence, not a conflict. */
+  brand: string | null
+  /** Words that follow the model name in the picked title (e.g. "absolute"). A listing without them is only a likely match. */
+  trim: string[]
+  /** Attribute values pinned by the search text or the picked title (storage, memory, generation, size). */
+  pins: Record<string, string>
+}
+
+export interface GenericTarget {
+  family: 'generic'
+  /** The chosen value for each variant dimension found in the listings. */
+  variant: Record<string, string>
+  spec: GenericSpec
+}
+
+/** What the user wants to compare. */
+export type ProductTarget = FamilyTarget | GenericTarget
 
 export interface DimensionOption {
   value: string
@@ -40,6 +68,8 @@ export interface Dimension {
   label: string
   options: DimensionOption[]
   default: string
+  /** Why `default` was pre-selected, when that is not obvious (generic products). */
+  note?: string
 }
 
 export interface FamilyInfo {
@@ -195,4 +225,9 @@ export interface Comparison {
   filterSummary: string
   /** Feed observation time for these offers (Search has no per-offer time). */
   sourceScrapedAt: string | null
+  /**
+   * Set when the product could not be identified well enough to compare safely
+   * (generic products only). Nothing is then called a match, and no lowest price is shown.
+   */
+  limitation: string | null
 }

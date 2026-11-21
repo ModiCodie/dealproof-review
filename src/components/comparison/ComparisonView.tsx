@@ -22,7 +22,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { CircleCheck, CircleHelp, CircleX, ExternalLink, GitBranch, Info, TriangleAlert } from 'lucide-react'
 import type { NormalizedOffer } from '@/lib/pricing-types'
-import { buildComparison, FAMILIES, targetLabel } from '@/lib/matching'
+import { buildComparison, dimensionsFor, targetLabel } from '@/lib/matching'
 import type { Availability, Comparison, Condition, MatchClass, OfferAnalysis, ProductTarget } from '@/lib/matching'
 import { Disclosure, More, Notice, Pill, SegmentedControl, type Tone } from '@/components/dp/ui'
 import { ProductIcon } from '@/components/dp/ProductIcon'
@@ -90,7 +90,8 @@ export function ComparisonView({
   lockVariant?: boolean
 }) {
   const [target, setTarget] = useState<ProductTarget>(initialTarget)
-  const family = FAMILIES[target.family]
+  const identity = target.family === 'generic' ? target.spec : target.family
+  const dimensions = useMemo(() => dimensionsFor(target, offers.map((o) => o.title)), [identity, offers])
   const comparison = useMemo(() => buildComparison(target, offers, scrapedAt), [target, offers, scrapedAt])
   const [title, ...variantParts] = targetLabel(target).split(' · ')
   const observedAt = comparison.sourceScrapedAt
@@ -121,28 +122,43 @@ export function ComparisonView({
           {renderActions?.(target)}
         </div>
 
-        {family.dimensions.length > 0 && !lockVariant && (
-          <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t border-border pt-4">
-            {family.dimensions.map((d) => (
-              <SegmentedControl
-                key={d.key}
-                label={d.label}
-                testId={`variant-${d.key}`}
-                options={d.options}
-                value={target.variant[d.key] ?? d.default}
-                onChange={(v) => setTarget({ ...target, variant: { ...target.variant, [d.key]: v } })}
-              />
-            ))}
+        {dimensions.length > 0 && !lockVariant && (
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            <div className="flex flex-wrap gap-x-8 gap-y-3">
+              {dimensions.map((d) => (
+                <SegmentedControl
+                  key={d.key}
+                  label={d.label}
+                  testId={`variant-${d.key}`}
+                  options={d.options}
+                  value={target.variant[d.key] ?? d.default}
+                  onChange={(v) => setTarget({ ...target, variant: { ...target.variant, [d.key]: v } })}
+                />
+              ))}
+            </div>
+            {dimensions.some((d) => d.note) && (
+              <p className="text-xs text-muted-foreground" data-testid="variant-notes">
+                {dimensions.filter((d) => d.note).map((d) => `${d.label}: ${d.note}`).join(' ')}
+              </p>
+            )}
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
           {lockVariant ? 'This saved product is one exact variant. ' : ''}
-          Listings are matched by fixed rules on their titles, not a model, so every decision has a stated reason. Colour does not count as a variant.
+          {target.family === 'generic'
+            ? 'Listings are matched by fixed rules on their titles only: the price feed has no barcodes or model fields. Every decision has a stated reason, and nothing is guessed. Colour does not count as a variant.'
+            : 'Listings are matched by fixed rules on their titles, not a model, so every decision has a stated reason. Colour does not count as a variant.'}
         </p>
       </section>
 
-      {/* 2. Price overview */}
-      <PriceOverview comparison={comparison} observedAt={observedAt} />
+      {/* 2. Price overview (or why nothing can be compared safely) */}
+      {comparison.limitation ? (
+        <Notice testId="cannot-compare" tone="caution" icon={TriangleAlert} role="note" title="DealProof can't compare these safely yet">
+          {comparison.limitation} The listings found are shown below, unsorted by product, with no lowest price.
+        </Notice>
+      ) : (
+        <PriceOverview comparison={comparison} observedAt={observedAt} />
+      )}
 
       {/* 3. Summary strip */}
       <div className="space-y-2">

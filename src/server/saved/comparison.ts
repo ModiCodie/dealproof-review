@@ -16,10 +16,10 @@
 import type { ActionTools } from 'deepspace/worker'
 import type { SavedComparisonResult, SavedRow } from '../../lib/saved'
 import { SAVED_COLLECTION } from '../../lib/saved'
-import { cacheKey, validateQuery } from '../pricing/normalize'
+import { validateQuery } from '../pricing/normalize'
 import { countUserClaims, StorageError, utcDay } from '../pricing/quota'
 import { loadConfig } from '../pricing/config'
-import { MARKET, readCache, toResult } from '../pricing/search'
+import { readCacheForQuery, toResult } from '../pricing/search'
 
 export interface SavedDeps {
   tools: ActionTools
@@ -48,7 +48,7 @@ export async function getSavedComparison(rawId: unknown, deps: SavedDeps): Promi
 
     const cfg = loadConfig(deps.configEnv ?? {})
     const t = now()
-    const cached = await readCache(tools, cacheKey(MARKET, v.query))
+    const cached = await readCacheForQuery(tools, v.query)
     const used = await countUserClaims(tools, userId, utcDay(t))
     return {
       success: true,

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import sony from '../../../tests/fixtures/pricesapi-search-sony.json'
 import samsung from '../../../tests/fixtures/pricesapi-search-samsung.json'
 import { runSearch } from './search'
-import { normalizeOffer, normalizeSearchResponse, validateQuery } from './normalize'
+import { cacheKey, normalizeOffer, normalizeSearchResponse, validateQuery } from './normalize'
 import { json, makeFakeTools, scriptedFetch } from './test-helpers'
 import type { SearchActionResult, SearchFailure, SearchSuccess } from '../../lib/pricing-types'
 
@@ -307,14 +307,14 @@ describe('duplicate in-flight requests', () => {
 
   it('an abandoned lock older than the TTL is taken over', async () => {
     const { run, tools, fetchImpl } = setup()
-    await tools.create('usage_claims', { claimKey: 'lock:us|sony wh-1000xm5', kind: 'lock', userId: 'x', day: '2026-11-19', createdAtMs: T0 - 10 * 60_000 })
+    await tools.create('usage_claims', { claimKey: `lock:${cacheKey('us', 'Sony WH-1000XM5')}`, kind: 'lock', userId: 'x', day: '2026-11-19', createdAtMs: T0 - 10 * 60_000 })
     ok(await run('Sony WH-1000XM5'))
     expect(fetchImpl.calls).toHaveLength(1)
   })
 
   it('a fresh lock is respected', async () => {
     const { run, tools, fetchImpl } = setup()
-    await tools.create('usage_claims', { claimKey: 'lock:us|sony wh-1000xm5', kind: 'lock', userId: 'x', day: '2026-11-19', createdAtMs: T0 - 1000 })
+    await tools.create('usage_claims', { claimKey: `lock:${cacheKey('us', 'Sony WH-1000XM5')}`, kind: 'lock', userId: 'x', day: '2026-11-19', createdAtMs: T0 - 1000 })
     expect(bad(await run('Sony WH-1000XM5')).code).toBe('search_in_progress')
     expect(fetchImpl.calls).toHaveLength(0)
   })
@@ -390,5 +390,53 @@ describe('normalization of missing / uncertain data', () => {
     expect(normalizeSearchResponse(null)).toBeNull()
     expect(normalizeSearchResponse({ success: false })).toBeNull()
     expect(normalizeSearchResponse({ success: true, data: {} })).toBeNull()
+  })
+})
+
+describe('general search: query canonicalization, cache and quota', () => {
+  const lookalikes = ['Sony WH-1000XM5', 'sony wh1000xm5', 'SONY  WH 1000 XM5', ' Sony WH–1000XM5 ']
+
+  it('trivial variations of the same text share one cache entry and one paid search', async () => {
+    const { run, fetchImpl, tools } = setup()
+    for (const q of lookalikes) ok(await run(q))
+    expect(fetchImpl.calls).toHaveLength(1)
+    expect(tools.dump('search_cache')).toHaveLength(1)
+    expect(tools.dump('usage_claims').filter((r) => r.data.kind === 'user')).toHaveLength(1)
+  })
+  it('different words stay different products, even when the letters are similar', () => {
+    expect(cacheKey('us', 'Dyson V15 Detect')).not.toBe(cacheKey('us', 'Dyson V15 Detect Absolute'))
+    expect(cacheKey('us', 'WD Black SN850X')).not.toBe(cacheKey('us', 'WD Black SN850'))
+    expect(cacheKey('us', 'Sony WH-1000XM5')).not.toBe(cacheKey('uk', 'Sony WH-1000XM5'))
+  })
+  it('still serves an entry written under the previous cache key (saved products keep working)', async () => {
+    const { run, fetchImpl, tools } = setup()
+    await tools.create('search_cache', {
+      key: 'us|sony wh-1000xm5', market: 'us', query: 'Sony WH-1000XM5',
+      payload: { candidates: normalizeSearchResponse(sonyBody)!.candidates, source: normalizeSearchResponse(sonyBody)!.source },
+      cachedAtMs: T0 - HOUR, expiresAtMs: T0 + 11 * HOUR,
+    })
+    const r = ok(await run('Sony WH-1000XM5'))
+    expect(r.data.fromCache).toBe(true)
+    expect(fetchImpl.calls).toHaveLength(0)
+  })
+  it('rejects text with no letters or digits and non-product input, without any upstream call or claim', async () => {
+    const { run, fetchImpl, tools } = setup()
+    for (const q of ['!!!', '---', '＋＋', '…']) expect(bad(await run(q)).code).toBe('invalid_query')
+    expect(validateQuery('x'.repeat(100))).toMatchObject({ ok: true })
+    expect(fetchImpl.calls).toHaveLength(0)
+    expect(tools.dump('usage_claims')).toHaveLength(0)
+  })
+  it('accepts arbitrary product names, including accents, digits and symbols inside a name', () => {
+    for (const q of ['Bose QuietComfort Ultra', 'Nintendo Switch 2', 'Café Barista 3000', 'AT&T iPhone 15', 'LG 27" 4K Monitor']) {
+      expect(validateQuery(q)).toMatchObject({ ok: true })
+    }
+  })
+  it('each user has their own daily limit; a cached result costs nothing', async () => {
+    const { run, fetchImpl } = setup()
+    ok(await run('Sony WH-1000XM5', 'user-a'))
+    const b = ok(await run('Sony WH-1000XM5', 'user-b'))
+    expect(b.data.fromCache).toBe(true)
+    expect(b.data.quota.userRemainingToday).toBe(3)
+    expect(fetchImpl.calls).toHaveLength(1)
   })
 })

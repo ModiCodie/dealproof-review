@@ -13,6 +13,7 @@ import type { NormalizedOffer } from '../pricing-types'
 import { assessPrices, type PricePoint } from './anomalies'
 import { detectCondition } from './condition'
 import { classifyTitle, targetLabel } from './families'
+import { identityLevel, INSUFFICIENT_MESSAGE } from './generic'
 import { identifySeller, sellerKey } from './seller'
 import type {
   CheapestPick,
@@ -207,6 +208,7 @@ export function buildComparison(target: ProductTarget, offers: NormalizedOffer[]
       secondHand: secondHand.length,
     }),
     sourceScrapedAt,
+    limitation: target.family === 'generic' && identityLevel(target.spec) === 'insufficient' ? INSUFFICIENT_MESSAGE : null,
   }
 }
 

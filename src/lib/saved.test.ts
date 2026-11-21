@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FAMILIES } from './matching'
+import { buildGenericSpec, FAMILIES, makeGenericTarget } from './matching'
 import type { ProductTarget } from './matching'
 import { parseSaved, productKey, toSavedRow } from './saved'
 import { savedProductsSchema } from '../schemas/saved-schema'
@@ -85,5 +85,53 @@ describe('saved_products schema: security configuration', () => {
 
   it('makes every stored column immutable', () => {
     expect(s.columns.every((c) => c.immutable)).toBe(true)
+  })
+})
+
+describe('saved general (non-featured) products', () => {
+  const generic = (query: string, title: string | null, chosen: Record<string, string> = {}, titles: (string | null)[] = []): ProductTarget =>
+    makeGenericTarget(buildGenericSpec(query, title), titles, chosen)
+  const rec = (data: object) => ({ recordId: 'r', createdAt: '2026-11-20T10:00:00Z', data: data as never })
+
+  it('round-trips the identity, picked product and variant, with no price data and no owner', () => {
+    const t = generic('WD Black SN850X 2TB', 'WD_BLACK SN850X NVMe SSD 2TB', { storage: '2TB' }, ['SN850X 1TB', 'SN850X 2TB', 'SN850X 4TB'])
+    const row = toSavedRow(t, 'WD Black SN850X 2TB')
+    expect(row.family).toBe('generic')
+    expect(Object.keys(row).sort()).toEqual(['displayName', 'family', 'market', 'productKey', 'query', 'variant'])
+    expect(JSON.stringify(row)).not.toMatch(/userId|price|offers/)
+    const parsed = parseSaved(rec({ ...row, userId: 'u' }))
+    expect(parsed?.target).toEqual(t)
+    expect(parsed?.productKey).toBe(row.productKey)
+  })
+
+  it('gives different products and different variants different keys, and the same choice the same key', () => {
+    const a = productKey(generic('Dyson V15 Detect', 'Dyson V15 Detect Cordless Vacuum'))
+    expect(productKey(generic('Dyson V15 Detect', 'Dyson V15 Detect Cordless Vacuum'))).toBe(a)
+    expect(productKey(generic('Dyson V15 Detect', 'Dyson V15 Detect Absolute Cordless Vacuum'))).not.toBe(a) // another picked product
+    expect(productKey(generic('Dyson V12 Detect Slim', 'Dyson V12 Detect Slim'))).not.toBe(a)
+    const ssd = (cap: string) => productKey(generic('WD Black SN850X', 'WD_BLACK SN850X', { storage: cap }, ['WD_BLACK SN850X 1TB SSD', 'WD_BLACK SN850X 2TB SSD']))
+    expect(ssd('1TB')).not.toBe(ssd('2TB'))
+    expect(a.length).toBeLessThanOrEqual(200)
+  })
+
+  it('never collides with a featured product key', () => {
+    expect(productKey(generic('Samsung 990 PRO 2TB', null))).not.toBe(productKey(samsung('2TB', 'without')))
+    expect(productKey(generic('Samsung 990 PRO 2TB', null)).startsWith('generic|')).toBe(true)
+  })
+
+  it('rejects forged generic rows (bad variant, oversize or missing identity) instead of guessing', () => {
+    const base = { ...toSavedRow(generic('Dyson V15 Detect', 'Dyson V15 Detect'), 'Dyson V15 Detect'), userId: 'u' }
+    const v = (patch: object) => ({ ...base, variant: { ...(base.variant as object), ...patch } })
+    expect(parseSaved(rec(base))).not.toBeNull()
+    expect(parseSaved(rec(v({ dim_storage: 'x'.repeat(500) })))).toBeNull()
+    expect(parseSaved(rec(v({ dim_bogus: '1' })))?.target).toBeDefined() // unknown keys are ignored, not trusted
+    expect(parseSaved(rec({ ...base, variant: {} }))).toBeNull()
+    expect(parseSaved(rec({ ...base, variant: { t: 'x' } }))).toBeNull()
+    expect(parseSaved(rec({ ...base, variant: 'not json' }))).toBeNull()
+  })
+
+  it('still reads rows saved by the previous version (featured families, unchanged shape)', () => {
+    const legacy = { family: 'sony-wh-1000xm5', variant: '{}', query: 'Sony WH-1000XM5', market: 'us', productKey: 'sony-wh-1000xm5', displayName: 'Sony WH-1000XM5', userId: 'u' }
+    expect(parseSaved(rec(legacy))?.target.family).toBe('sony-wh-1000xm5')
   })
 })

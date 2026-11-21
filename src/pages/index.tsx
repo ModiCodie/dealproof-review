@@ -22,17 +22,18 @@ import { Seo } from '../components/Seo'
 import { Pill } from '../components/dp/ui'
 import { ProductIcon } from '../components/dp/ProductIcon'
 import { BRAND_NAME } from '../constants'
-import { CATALOG, SUPPORTED_COUNT, variantSummary } from '../lib/catalog'
+import { CATALOG, variantSummary } from '../lib/catalog'
 import { seo } from '../seo'
 
 const STEPS = [
-  { n: 1, title: 'Pick a product', text: 'Choose a product and, where it matters, the variant, such as storage size or edition.' },
-  { n: 2, title: 'We match every listing', text: 'Each retailer listing is checked against your exact model and variant using fixed rules, with a stated reason for every decision.' },
+  { n: 1, title: 'Search and pick the model', text: 'Search by brand and model, then choose the exact product from what the price feed finds. Where it matters, choose the variant, such as storage size.' },
+  { n: 2, title: 'We match every listing', text: 'Each retailer listing is checked against your model and variant using fixed rules on its title, with a stated reason for every decision.' },
   { n: 3, title: 'Compare what is comparable', text: 'See the lowest reported offer, a clear retailer table, and what still needs verification.' },
 ]
 
 const PROMISES = [
-  'Prices come from a retailer data feed and are not checked at checkout.',
+  'Prices come from a retailer data feed and are not checked at checkout. Coverage depends on that feed.',
+  'Listings are matched on their titles only: the feed has no barcodes or model numbers, so uncertain matches are labelled.',
   'Condition and shipping are shown only when a listing states them.',
   'Unusually low prices are flagged for a closer look, never labelled as fraud.',
   'There is no price history, so DealProof does not say whether a price is good over time.',
@@ -60,12 +61,12 @@ export default function Landing() {
         <main>
           <section className="mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 sm:py-20 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             <div>
-              <p className="text-sm font-medium text-primary">Price comparison · {SUPPORTED_COUNT} products available now</p>
+              <p className="text-sm font-medium text-primary">Price comparison for consumer products</p>
               <h1 className="mt-3 text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
                 Compare prices without comparing the wrong products
               </h1>
               <p className="mt-4 max-w-lg text-lg text-muted-foreground">
-                DealProof searches retailer offers for a product and is honest about what it cannot verify: variants, condition, shipping and price history.
+                Search for a product, pick the exact model, and see retailer offers. DealProof is honest about what it cannot verify: variants, condition, shipping and price history.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link to="/search" className="inline-flex h-11 items-center gap-2 rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90">
@@ -100,8 +101,8 @@ export default function Landing() {
 
           <section className="border-y border-border bg-card">
             <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-              <h2 className="text-2xl font-semibold text-foreground">Products available now</h2>
-              <p className="mt-1 text-muted-foreground">These products have tuned matching rules today.</p>
+              <h2 className="text-2xl font-semibold text-foreground">Featured products</h2>
+              <p className="mt-1 text-muted-foreground">Search for almost any product, or start with one of these. They have hand-written matching rules and a free demo.</p>
               <ul className="mt-6 grid gap-4 sm:grid-cols-3">
                 {CATALOG.map((p) => (
                   <li key={p.key}>
