@@ -7,7 +7,7 @@
  * browser -> local Worker action -> PricesAPI (the key stays server-side). Any second
  * searchProducts request is aborted before it leaves the browser, and the test fails
  * if the browser itself ever talks to PricesAPI. The normalized response is saved to
- * experiments/raw/ (gitignored) for inspection; screenshots go to docs/screenshots/live/.
+ * experiments/price-api/out/ (gitignored) for inspection; screenshots go to docs/screenshots/live/.
  */
 import { test, expect, loadAllTestAccounts } from 'deepspace/testing'
 import fs from 'node:fs'
@@ -26,8 +26,8 @@ test('live validation: one real search', async ({ users }) => {
     if (++sent > 1) return route.abort() // never a second paid search
     const resp = await route.fetch()
     const text = await resp.text()
-    fs.mkdirSync('experiments/raw', { recursive: true })
-    fs.writeFileSync('experiments/raw/live-validation-response.json', text)
+    fs.mkdirSync('experiments/price-api/out', { recursive: true })
+    fs.writeFileSync('experiments/price-api/out/live-validation-response.json', text)
     await route.fulfill({ response: resp, body: text })
   })
   fs.mkdirSync('docs/screenshots/live', { recursive: true })
