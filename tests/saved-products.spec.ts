@@ -164,9 +164,17 @@ async function clearOwn(page: Page) {
   }
   await expect(page.getByTestId('saved-empty')).toBeVisible()
 }
+const PRODUCT_FOR_QUERY: Record<string, string> = { 'Sony WH-1000XM5': 'sony', 'Logitech MX Master 3S': 'logitech', 'Samsung 990 PRO 2TB': 'samsung' }
+/**
+ * Choose the product in the picker, then press "Check live prices". `searchProducts` is mocked by the caller and
+ * answers with `query` (which can carry a unique suffix to dodge the real cache); the page itself always sends the
+ * product's fixed query, so the product is found by prefix.
+ */
 async function searchAndCompare(page: Page, query: string) {
+  const key = Object.entries(PRODUCT_FOR_QUERY).find(([q]) => query.startsWith(q))?.[1]
+  if (!key) throw new Error(`no supported product for query: ${query}`)
   await page.goto('/search')
-  await page.getByTestId('search-input').fill(query)
+  await page.getByTestId(`product-${key}`).click()
   await page.getByTestId('search-submit').click()
   await expect(page.getByTestId('comparison')).toBeVisible({ timeout: 20_000 })
 }
@@ -201,8 +209,8 @@ test.describe('saved products (real record storage, mocked prices)', () => {
     await searchAndCompare(a.page, 'Samsung 990 PRO 2TB')
     await a.page.getByTestId('save-button').click() // 2TB without heatsink (the search default)
     await expect(a.page.getByTestId('save-state')).toBeVisible()
-    await a.page.getByTestId('variant-capacity').selectOption('4TB')
-    await a.page.getByTestId('variant-heatsink').selectOption('with')
+    await a.page.getByTestId('variant-capacity-4TB').click()
+    await a.page.getByTestId('variant-heatsink-with').click()
     // the save control follows the variant now on screen: this one is not saved yet
     await expect(a.page.getByTestId('save-button')).toBeVisible()
     await a.page.getByTestId('save-button').click()

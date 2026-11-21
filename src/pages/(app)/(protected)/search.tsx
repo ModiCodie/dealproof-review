@@ -1,22 +1,36 @@
 /**
- * Product search page (Day 2 vertical slice).
+ * Compare page (route /search).
  *
- * Flow: form submit -> searchProducts() -> POST /api/actions/searchProducts ->
- * Worker action -> cache / PricesAPI -> normalized result -> rendered below.
- * Day 3: for supported products the offers are matched and compared by the
- * deterministic module in src/lib/matching; other searches show raw offers.
- * A clearly labelled saved sample (real Day 1 data) can be loaded for demos; it
- * never replaces a live result and is never used when a live search fails.
+ * DealProof compares a small, fixed set of products accurately, so this page is
+ * a product picker, not a free-text search box. Two explicit actions:
+ *   - Explore demo        bundled sample data; free; never saved.
+ *   - Check live prices   the PricesAPI-backed server action (per-user daily
+ *                         limit, 12-hour cache). It runs ONLY when this button
+ *                         is pressed: choosing a product, switching variants
+ *                         or navigating never starts a paid search.
+ * The server still validates every query; the three queries sent here are the
+ * same ones the previous text box was used with (see src/lib/catalog.ts).
+ *
+ * Flow: live check -> searchProducts() -> POST /api/actions/searchProducts ->
+ * Worker action -> cache / PricesAPI -> normalized result -> matched and
+ * compared by the deterministic module in src/lib/matching.
  */
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Button, Input } from '@/components/ui'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Check, Clock, FlaskConical, Lock, SearchX, Zap } from 'lucide-react'
+import { Button } from '@/components/ui'
 import { searchProducts } from '@/lib/api'
 import { ComparisonView, formatPrice } from '@/components/comparison/ComparisonView'
 import { SaveControl } from '@/components/saved/SaveControl'
 import { ErrorPanel } from '@/components/SearchPanels'
-import { formatTime, formatWait } from '@/lib/format'
+import { Disclosure, More, Notice, Page, Pill, Skeleton } from '@/components/dp/ui'
+import { ProductIcon } from '@/components/dp/ProductIcon'
+import { CATALOG, catalogProduct, SUPPORTED_COUNT, variantSummary, type CatalogKey, type CatalogProduct } from '@/lib/catalog'
+import { formatDate, formatTime, formatWait } from '@/lib/format'
 import { detectTarget } from '@/lib/matching'
+import { usePageTitle } from '@/lib/use-page-title'
+import { cn } from '@/lib/utils'
 import type {
   NormalizedOffer,
   ProductCandidate,
@@ -33,107 +47,211 @@ type State =
   | { status: 'sample'; sample: Sample }
 
 interface Sample {
-  label: string
+  key: CatalogKey
   query: string
   candidates: ProductCandidate[]
   source: SearchSource
 }
 
-const SAMPLES: { key: string; label: string; query: string; load: () => Promise<{ default: { candidates: ProductCandidate[]; source: SearchSource } }> }[] = [
-  { key: 'sony', label: 'Sony WH-1000XM5', query: 'Sony WH-1000XM5', load: () => import('../../../../tests/fixtures/real-sony.normalized.json') as never },
-  { key: 'logitech', label: 'Logitech MX Master 3S', query: 'Logitech MX Master 3S', load: () => import('../../../../tests/fixtures/real-logitech.normalized.json') as never },
-  { key: 'samsung', label: 'Samsung 990 PRO 2TB', query: 'Samsung 990 PRO 2TB', load: () => import('../../../../tests/fixtures/real-samsung.normalized.json') as never },
-]
+type SampleModule = { default: { candidates: ProductCandidate[]; source: SearchSource } }
+const SAMPLE_LOADERS: Record<CatalogKey, () => Promise<SampleModule>> = {
+  sony: () => import('../../../../tests/fixtures/real-sony.normalized.json') as never,
+  logitech: () => import('../../../../tests/fixtures/real-logitech.normalized.json') as never,
+  samsung: () => import('../../../../tests/fixtures/real-samsung.normalized.json') as never,
+}
+/** When the bundled samples were captured (they are saved real search results). */
+const SAMPLE_CAPTURED = '2026-11-19T12:00:00.000Z'
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('')
+  usePageTitle('Compare')
+  const [params, setParams] = useSearchParams()
+  const [productKey, setProductKey] = useState<CatalogKey>(() => catalogProduct(params.get('product'))?.key ?? 'sony')
   const [state, setState] = useState<State>({ status: 'idle' })
   const controller = useRef<AbortController | null>(null)
+  const product = catalogProduct(productKey) as CatalogProduct
+  const loading = state.status === 'loading'
 
   // Cancel any in-flight request if the page unmounts.
   useEffect(() => () => controller.current?.abort(), [])
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault()
-    if (state.status === 'loading') return
-    const q = query.trim()
-    if (q.length < 2) {
-      setState({ status: 'error', failure: { success: false, code: 'invalid_query', error: 'Enter at least 2 characters.' } })
-      return
-    }
+  async function loadDemo(key: CatalogKey) {
+    const mod = await SAMPLE_LOADERS[key]()
+    const fx = mod.default
+    const p = catalogProduct(key) as CatalogProduct
+    setState({ status: 'sample', sample: { key, query: p.query, candidates: fx.candidates, source: fx.source } })
+  }
+
+  function choose(key: CatalogKey) {
+    if (loading || key === productKey) return
+    setProductKey(key)
+    setParams({ product: key }, { replace: true })
+    // Switching products while looking at the (free) demo shows that product's demo.
+    // Anything else resets to the picker: a paid search is never started by choosing a product.
+    if (state.status === 'sample') void loadDemo(key)
+    else setState({ status: 'idle' })
+  }
+
+  async function checkLive() {
+    if (loading) return
     controller.current?.abort()
     const c = new AbortController()
     controller.current = c
-    setState({ status: 'loading', query: q })
+    setState({ status: 'loading', query: product.query })
     try {
-      const r = await searchProducts(q, c.signal)
+      const r = await searchProducts(product.query, c.signal)
       setState(r.success ? { status: 'done', response: r.data } : { status: 'error', failure: r })
     } catch {
       /* aborted: ignore */
     }
   }
 
-  const loading = state.status === 'loading'
-
-  async function loadSample(key: string) {
-    const def = SAMPLES.find((x) => x.key === key)
-    if (!def || loading) return
-    const mod = await def.load()
-    const fx = mod.default
-    setState({ status: 'sample', sample: { label: def.label, query: def.query, candidates: fx.candidates, source: fx.source } })
-  }
-
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-8">
-      <h1 className="text-2xl font-semibold text-foreground">DealProof</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Compare prices without comparing the wrong products. Supported products (Sony WH-1000XM5,
-        Logitech MX Master 3S, Samsung 990 PRO) are matched by model and variant before prices are compared.
-      </p>
+    <Page>
+      <header className="max-w-2xl">
+        <p className="text-sm font-medium text-primary">Price comparison · {SUPPORTED_COUNT} supported products</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground sm:text-4xl">Compare the right listings, not just the cheapest</h1>
+        <p className="mt-3 text-base text-muted-foreground">
+          Pick a product, then explore a demo or check live prices. Every listing is matched by model and variant first, so a 1TB drive is never compared with a 2TB one.
+        </p>
+      </header>
 
-      <form onSubmit={onSubmit} className="mt-6 flex gap-2" role="search">
-        <Input
-          data-testid="search-input"
-          aria-label="Product name"
-          placeholder="e.g. Sony WH-1000XM5"
-          value={query}
-          maxLength={100}
-          onChange={(e) => setQuery(e.target.value)}
-          disabled={loading}
-        />
-        <Button type="submit" data-testid="search-submit" disabled={loading}>
-          {loading ? 'Searching…' : 'Search'}
-        </Button>
-      </form>
+      <ProductPicker value={productKey} onChange={choose} disabled={loading} />
+
+      <section className="mt-8" aria-labelledby="how-heading" data-testid="sample-picker">
+        <h2 id="how-heading" className="text-sm font-semibold text-foreground">
+          <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground" aria-hidden>2</span>
+          Choose how to compare {product.brand} {product.model}
+        </h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <ActionCard
+            icon={<FlaskConical className="size-5" aria-hidden />}
+            title="Explore demo"
+            badge={<Pill tone="neutral">Free</Pill>}
+            body={`Saved real offers from ${formatDate(SAMPLE_CAPTURED)}. No search credit used. Demo results can’t be saved.`}
+          >
+            <Button type="button" variant="outline" onClick={() => void loadDemo(productKey)} disabled={loading} data-testid={`sample-${productKey}`}>
+              Show demo
+            </Button>
+          </ActionCard>
+          <ActionCard
+            icon={<Zap className="size-5" aria-hidden />}
+            title="Check live prices"
+            badge={<Pill tone="likely">Uses a daily search</Pill>}
+            body="Fetches current US offers. Counts as one of your fresh searches unless a result under 12 hours old is already stored."
+            primary
+          >
+            <Button type="button" onClick={checkLive} disabled={loading} data-testid="search-submit">
+              {loading ? 'Checking…' : 'Check live prices'}
+            </Button>
+          </ActionCard>
+        </div>
+      </section>
 
       {state.status === 'loading' && <LoadingPanel query={state.query} />}
       {state.status === 'error' && <ErrorPanel failure={state.failure} />}
       {state.status === 'done' && <Results response={state.response} />}
       {state.status === 'sample' && <SampleResults sample={state.sample} />}
-      {state.status === 'idle' && (
-        <p className="mt-8 text-sm text-muted-foreground">
-          Try a specific product name. Fresh searches are limited per user per day; repeated
-          searches are served from a 12-hour cache.
-        </p>
-      )}
-      {(state.status === 'idle' || state.status === 'error' || state.status === 'sample') && (
-        <div className="mt-6 rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground" data-testid="sample-picker">
-          <p>
-            No search credits left or just exploring? Load a <strong>saved sample</strong> (real search results
-            captured on 19 Nov 2026, not live prices):
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SAMPLES.map((x) => (
-              <Button key={x.key} type="button" variant="outline" onClick={() => loadSample(x.key)} data-testid={`sample-${x.key}`}>
-                {x.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
+      {state.status === 'idle' && <Legend />}
+    </Page>
+  )
+}
+
+// ------------------------------------------------------------------ picker
+
+function ProductPicker({ value, onChange, disabled }: { value: CatalogKey; onChange: (k: CatalogKey) => void; disabled: boolean }) {
+  const move = (e: KeyboardEvent, i: number) => {
+    const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (!step) return
+    e.preventDefault()
+    const next = CATALOG[(i + step + CATALOG.length) % CATALOG.length]
+    onChange(next.key)
+    ;(e.currentTarget.parentElement?.querySelector(`[data-key="${next.key}"]`) as HTMLElement | null)?.focus()
+  }
+  return (
+    <section className="mt-8" aria-labelledby="pick-heading">
+      <h2 id="pick-heading" className="text-sm font-semibold text-foreground">
+        <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground" aria-hidden>1</span>
+        Choose a product
+      </h2>
+      <div role="radiogroup" aria-labelledby="pick-heading" data-testid="product-picker" className="mt-3 grid gap-3 sm:grid-cols-3">
+        {CATALOG.map((p, i) => {
+          const selected = p.key === value
+          return (
+            <button
+              key={p.key}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              tabIndex={selected ? 0 : -1}
+              disabled={disabled}
+              data-key={p.key}
+              data-testid={`product-${p.key}`}
+              onClick={() => onChange(p.key)}
+              onKeyDown={(e) => move(e, i)}
+              className={cn(
+                'relative flex items-start gap-3 rounded-2xl border bg-card p-4 text-left shadow-[0_1px_2px_rgba(18,23,34,0.05)] transition hover:shadow-[0_4px_14px_rgba(18,23,34,0.08)] disabled:cursor-not-allowed disabled:opacity-60',
+                selected ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-input',
+              )}
+            >
+              <ProductIcon family={p.family} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs text-muted-foreground">{p.brand}</span>
+                <span className="block text-base font-semibold text-foreground">{p.model}</span>
+                <span className="mt-0.5 block text-sm text-muted-foreground">{p.category}</span>
+                <span className="mt-2 block text-xs text-muted-foreground">{variantSummary(p.family)}</span>
+              </span>
+              {selected && (
+                <span className="absolute right-3 top-3 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground" aria-hidden>
+                  <Check className="size-3.5" />
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function ActionCard({ icon, title, badge, body, primary, children }: { icon: React.ReactNode; title: string; badge: React.ReactNode; body: string; primary?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={cn('flex flex-col rounded-2xl border bg-card p-4 shadow-[0_1px_2px_rgba(18,23,34,0.05)] sm:p-5', primary ? 'border-primary/30' : 'border-border')}>
+      <div className="flex items-center gap-2.5">
+        <span className={cn('flex size-9 items-center justify-center rounded-lg', primary ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground')}>{icon}</span>
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        <span className="ml-auto">{badge}</span>
+      </div>
+      <p className="mt-3 flex-1 text-sm text-muted-foreground">{body}</p>
+      <div className="mt-4">{children}</div>
     </div>
   )
 }
+
+/** Shown before any result: what the labels in a comparison mean, in one glance. */
+function Legend() {
+  const items: { tone: 'ok' | 'likely' | 'variant' | 'caution'; label: string; text: string }[] = [
+    { tone: 'ok', label: 'Exact match', text: 'The listing names your model and every variant detail you chose.' },
+    { tone: 'likely', label: 'Likely match', text: 'Probably the right product, but the listing leaves a detail out.' },
+    { tone: 'variant', label: 'Different variant', text: 'Same product family, other configuration. Kept out of your comparison.' },
+    { tone: 'caution', label: 'Price unusually low', text: 'Far below other sellers. Worth a closer look before you rely on it.' },
+  ]
+  return (
+    <section className="mt-10" aria-labelledby="legend-heading" data-testid="legend">
+      <h2 id="legend-heading" className="text-sm font-semibold text-foreground">What the labels mean</h2>
+      <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+        {items.map((i) => (
+          <li key={i.label} className="flex items-start gap-3 rounded-xl border border-border bg-card p-3.5">
+            <Pill tone={i.tone} className="mt-0.5">{i.label}</Pill>
+            <p className="text-sm text-muted-foreground">{i.text}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-muted-foreground">Prices come from a retailer data feed and are not checked at checkout.</p>
+    </section>
+  )
+}
+
+// ------------------------------------------------------------------ results
 
 function LoadingPanel({ query }: { query: string }) {
   const [seconds, setSeconds] = useState(0)
@@ -142,14 +260,17 @@ function LoadingPanel({ query }: { query: string }) {
     return () => clearInterval(id)
   }, [])
   return (
-    <div data-testid="search-loading" role="status" aria-live="polite" className="mt-8 rounded-lg border border-border bg-card p-6">
+    <div data-testid="search-loading" role="status" aria-live="polite" className="mt-8 rounded-2xl border border-border bg-card p-5 sm:p-6">
       <div className="flex items-center gap-3">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" aria-hidden />
-        <p className="text-sm font-medium text-foreground">Searching retailers for “{query}”… {seconds}s</p>
+        <span className="size-4 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-hidden />
+        <p className="text-sm font-medium text-foreground">Checking retailers for “{query}”… {seconds}s</p>
       </div>
-      <p className="mt-2 text-sm text-muted-foreground">
-        A fresh live search usually takes 20–40 seconds. Please keep this page open.
-      </p>
+      <p className="mt-2 text-sm text-muted-foreground">A fresh live search usually takes 20–40 seconds. Please keep this page open.</p>
+      <div className="mt-5 space-y-3" aria-hidden>
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-10 w-5/6" />
+      </div>
     </div>
   )
 }
@@ -158,33 +279,36 @@ function Results({ response }: { response: SearchResponse }) {
   const { result, fromCache, quota } = response
   const hasAny = result.candidates.some((c) => c.offers.length > 0)
   return (
-    <section className="mt-8" data-testid="search-results">
-      <div className="rounded-lg border border-border bg-card p-3 text-sm" data-testid="result-meta">
-        <p className="font-medium text-foreground">
-          {fromCache ? 'Stored result' : 'New result'} for “{result.query}” (US market)
-        </p>
-        <p className="mt-1 text-muted-foreground">
-          Prices observed by the source: <span className="text-foreground" data-testid="scraped-at">{formatTime(result.source.scrapedAt) ?? 'Unknown'}</span>
-          {' · '}stored by DealProof: <span className="text-foreground">{formatTime(result.cachedAt)}</span>
-          {' · '}fresh searches left today: <span className="text-foreground">{quota.userRemainingToday} of {quota.userDailyLimit}</span>
-        </p>
-        <details className="mt-1 text-xs text-muted-foreground">
-          <summary className="cursor-pointer">About this data</summary>
-          <p className="mt-1" data-testid="upstream-source">Price feed: {describeUpstream(result.source)}</p>
+    <section className="mt-8 space-y-6" data-testid="search-results">
+      <div className="rounded-2xl border border-border bg-card p-4" data-testid="result-meta">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+          <Pill tone={fromCache ? 'neutral' : 'ok'} icon={fromCache ? Clock : Zap}>{fromCache ? 'Stored result' : 'New result'}</Pill>
+          <p className="text-muted-foreground">
+            Prices observed <span className="font-medium text-foreground" data-testid="scraped-at">{formatTime(result.source.scrapedAt) ?? 'Unknown'}</span>
+          </p>
+          <p className="text-muted-foreground">
+            Stored by DealProof <span className="text-foreground">{formatTime(result.cachedAt)}</span>
+          </p>
+          <p className="text-muted-foreground sm:ml-auto">
+            Fresh searches left today: <span className="font-medium text-foreground">{quota.userRemainingToday} of {quota.userDailyLimit}</span>
+          </p>
+        </div>
+        <More label="About this data" className="mt-2 text-xs">
+          <p data-testid="upstream-source">Price feed: {describeUpstream(result.source)}</p>
           {fromCache && <p>The DealProof cache entry expires {formatTime(result.expiresAt)}.</p>}
           <p className="mt-1">
-            Prices come from a retailer data feed and are <strong>not independently verified</strong>.
-            Condition is unknown unless a listing says otherwise, and shipping is often missing.
+            Prices come from a retailer data feed and are <strong>not independently verified</strong>. Condition is unknown unless a listing says otherwise, and shipping is often missing.
           </p>
-        </details>
+        </More>
       </div>
 
       {hasAny && <Compared query={result.query} candidates={result.candidates} scrapedAt={result.source.scrapedAt} />}
 
       {!hasAny ? (
-        <div data-testid="search-empty" className="mt-6 rounded-lg border border-dashed border-border p-6 text-center">
-          <p className="text-sm font-medium text-foreground">No retailer offers found</p>
-          <p className="mt-1 text-sm text-muted-foreground">Try a more specific name or model number. This search did not use any of your daily allowance.</p>
+        <div data-testid="search-empty" className="rounded-2xl border border-dashed border-border bg-card p-8 text-center">
+          <SearchX className="mx-auto size-8 text-muted-foreground" aria-hidden />
+          <p className="mt-3 text-sm font-medium text-foreground">No retailer offers found</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Nothing was returned for this product right now. This check did not use any of your daily allowance.</p>
         </div>
       ) : (
         <RawOffers candidates={result.candidates} />
@@ -198,14 +322,13 @@ function Compared({ query, candidates, scrapedAt, isSample }: { query: string; c
   const offers = useMemo(() => candidates.flatMap((c) => c.offers), [candidates])
   if (!target) {
     return (
-      <p data-testid="unsupported" className="mt-6 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-        DealProof can only match Sony WH-1000XM5, Logitech MX Master 3S and Samsung 990 PRO so far. For
-        “{query}” the raw retailer offers are shown below, unmatched.
-      </p>
+      <Notice testId="unsupported" tone="neutral" className="mt-6">
+        DealProof can only compare Sony WH-1000XM5, Logitech MX Master 3S and Samsung 990 PRO.
+      </Notice>
     )
   }
   return (
-    <div className="mt-6">
+    <div>
       {/* keyed so a new result or another sample starts from its own product and variant */}
       <ComparisonView
         key={`${query}|${scrapedAt ?? ''}`}
@@ -214,8 +337,9 @@ function Compared({ query, candidates, scrapedAt, isSample }: { query: string; c
         initialTarget={target}
         renderActions={(t) =>
           isSample ? (
-            <p className="max-w-xs text-xs text-muted-foreground sm:text-right" data-testid="save-unavailable">
-              Saving needs a live comparison. This is a bundled demo sample, which is not stored on the server, so it cannot be reopened later.
+            <p className="flex max-w-xs items-start gap-1.5 text-xs text-muted-foreground sm:text-right" data-testid="save-unavailable">
+              <Lock className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              <span>Saving needs a live comparison. Demo results are not stored, so they can’t be reopened later.</span>
             </p>
           ) : (
             <SaveControl target={t} query={query} />
@@ -226,41 +350,37 @@ function Compared({ query, candidates, scrapedAt, isSample }: { query: string; c
   )
 }
 
-function RawOffers({ candidates }: { candidates: ProductCandidate[] }) {
-  return (
-    <details className="mt-6 rounded-lg border border-border bg-card" data-testid="raw-offers">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-foreground">Raw feed groupings (unmatched, as received)</summary>
-      <div className="space-y-6 p-2">
-        {candidates.map((c, i) => (
-          <Candidate key={`${c.pid ?? 'x'}-${i}`} candidate={c} index={i} />
-        ))}
-      </div>
-    </details>
-  )
-}
-
 function SampleResults({ sample }: { sample: Sample }) {
+  const p = catalogProduct(sample.key) as CatalogProduct
   return (
-    <section className="mt-8" data-testid="sample-results">
-      <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-sm" role="note">
-        <p className="font-medium text-foreground">Saved sample, not a live search: {sample.label}</p>
-        <p className="mt-1 text-muted-foreground">
-          These are real offers captured on {formatTime(sample.source.scrapedAt) ?? 'an unknown date'}. Prices
-          and stock have almost certainly changed. This did not use a search credit.
-        </p>
-      </div>
+    <section className="mt-8 space-y-6" data-testid="sample-results">
+      <Notice role="note" tone="caution" icon={FlaskConical} title="Demo data, not live prices">
+        Real offers for {p.brand} {p.model} captured {formatTime(sample.source.scrapedAt) ?? 'on an unknown date'}. Prices and stock have almost certainly changed. No search credit used.
+      </Notice>
       <Compared query={sample.query} candidates={sample.candidates} scrapedAt={sample.source.scrapedAt} isSample />
       <RawOffers candidates={sample.candidates} />
     </section>
   )
 }
 
+function RawOffers({ candidates }: { candidates: ProductCandidate[] }) {
+  return (
+    <Disclosure testId="raw-offers" summary={<span className="text-sm">Advanced: raw feed groupings (unmatched, as received)</span>}>
+      <div className="space-y-6 border-t border-border p-3 sm:p-4">
+        {candidates.map((c, i) => (
+          <Candidate key={`${c.pid ?? 'x'}-${i}`} candidate={c} index={i} />
+        ))}
+      </div>
+    </Disclosure>
+  )
+}
+
 function Candidate({ candidate: c, index }: { candidate: ProductCandidate; index: number }) {
   return (
-    <article className="rounded-lg border border-border bg-card" data-testid="candidate">
+    <article className="overflow-hidden rounded-xl border border-border bg-card" data-testid="candidate">
       <header className="border-b border-border p-4">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">Candidate {index + 1} (unverified grouping)</p>
-        <h2 className="mt-1 text-base font-medium text-foreground">{c.title ?? 'Untitled product'}</h2>
+        <h3 className="mt-1 text-base font-medium text-foreground">{c.title ?? 'Untitled product'}</h3>
         <p className="mt-1 text-xs text-muted-foreground">
           {c.offerCount} offer{c.offerCount === 1 ? '' : 's'} reported
           {c.offers.length < c.offerCount ? `, ${c.offers.length} shown` : ''}
@@ -270,7 +390,7 @@ function Candidate({ candidate: c, index }: { candidate: ProductCandidate; index
       </header>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
-          <thead className="text-xs text-muted-foreground">
+          <thead className="bg-muted/50 text-xs text-muted-foreground">
             <tr>
               <th className="px-4 py-2 font-medium">Merchant</th>
               <th className="px-4 py-2 font-medium">Listing title</th>

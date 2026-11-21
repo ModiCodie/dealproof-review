@@ -29,7 +29,8 @@ function guardNoPaidCalls(page: Page) {
 
 async function openSample(page: Page, key: 'sony' | 'logitech' | 'samsung') {
   await page.goto('/search')
-  await expect(page.getByTestId('sample-picker')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
+  await page.getByTestId(`product-${key}`).click()
   await page.getByTestId(`sample-${key}`).click()
   await expect(page.getByTestId('sample-results')).toBeVisible()
   await expect(page.getByTestId('comparison')).toBeVisible()
@@ -53,9 +54,10 @@ test.describe('DealProof comparison UI', () => {
     await expect(u.page.getByTestId('app-navigation')).toBeVisible({ timeout: 20_000 })
     await expect(u.page.getByTestId('nav-user-name')).toHaveText(/\S/, { timeout: 15_000 })
     await u.page.goto('/search')
-    await expect(u.page.getByTestId('search-input')).toBeVisible({ timeout: 20_000 })
-    await expect(u.page.getByRole('heading', { name: 'DealProof' })).toBeVisible()
-    await expect(u.page.getByTestId('sample-picker')).toContainText('saved sample')
+    await expect(u.page.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
+    await expect(u.page.getByRole('heading', { level: 1 })).toContainText('Compare the right listings')
+    await expect(u.page.getByTestId('sample-picker')).toContainText('Explore demo')
+    await expect(u.page.getByTestId('sample-picker')).toContainText('Check live prices')
     await u.page.screenshot({ path: `${SHOTS}/01-search-idle-desktop.png` })
     expect(net.bad).toEqual([])
     expect(net.searchCalls).toEqual([])
@@ -68,8 +70,8 @@ test.describe('DealProof comparison UI', () => {
     await openSample(p, 'sony')
 
     // clearly a saved sample, not live
-    await expect(p.getByRole('note').filter({ hasText: 'Saved sample, not a live search' })).toBeVisible()
-    await expect(p.getByRole('note').filter({ hasText: 'did not use a search credit' })).toBeVisible()
+    await expect(p.getByRole('note').filter({ hasText: 'Demo data, not live prices' })).toBeVisible()
+    await expect(p.getByRole('note').filter({ hasText: 'No search credit used' })).toBeVisible()
     await expect(p.getByTestId('target-label')).toHaveText(/Sony WH-1000XM5/)
     // demo samples cannot be saved (they are not stored server-side, so they could never be reopened)
     await expect(p.getByTestId('save-unavailable')).toContainText('Saving needs a live comparison')
@@ -114,6 +116,7 @@ test.describe('DealProof comparison UI', () => {
     // missing shipping is never turned into "free"
     expect(await section.getByTestId('offer').filter({ hasText: /Shipping: Not provided/ }).filter({ hasText: /Shipping: (free|\$0)/i }).count()).toBe(0)
     await expect(card).toContainText('Same model and variant')
+    await card.getByText('Details', { exact: true }).click()
     await card.getByText('Why this product-match decision?').click()
     await expect(card).toContainText('Title names WH-1000XM5')
 
@@ -161,7 +164,7 @@ test.describe('DealProof comparison UI', () => {
     await expect(variants).toContainText('MX Master 3S for Business')
     await expect(variants).toContainText('Different edition: for Mac')
 
-    await p.getByTestId('variant-edition').selectOption('mac')
+    await p.getByTestId('variant-edition-mac').click()
     await expect(p.getByTestId('target-label')).toContainText('For Mac')
     await expect(p.getByTestId('section-comparable')).toBeVisible()
     // matching listings are now the Mac edition; the standard ones become "different variant"
@@ -173,7 +176,7 @@ test.describe('DealProof comparison UI', () => {
     await expect(p.getByTestId('section-variants')).toContainText('MX Master 3S standard edition')
     await p.screenshot({ path: `${SHOTS}/04-logitech-mac-desktop.png` })
 
-    await p.getByTestId('variant-edition').selectOption('business')
+    await p.getByTestId('variant-edition-business').click()
     await expect(p.getByTestId('target-label')).toContainText('For Business')
     expect(net.bad).toEqual([])
     expect(net.searchCalls).toEqual([])
@@ -184,10 +187,10 @@ test.describe('DealProof comparison UI', () => {
     const p = u.page
     await openSample(p, 'sony')
     await expect(p.getByTestId('target-label')).toContainText('Sony WH-1000XM5')
-    await p.getByTestId('sample-logitech').click()
+    await p.getByTestId('product-logitech').click() // while viewing a (free) demo, choosing a product shows that product's demo
     await expect(p.getByTestId('target-label')).toContainText('MX Master 3S')
     await expect(p.getByTestId('variant-edition')).toBeVisible()
-    await p.getByTestId('sample-samsung').click()
+    await p.getByTestId('product-samsung').click()
     await expect(p.getByTestId('target-label')).toContainText('990 PRO')
     await expect(p.getByTestId('variant-capacity')).toBeVisible()
   })
@@ -204,7 +207,7 @@ test.describe('DealProof comparison UI', () => {
     await expect(p.getByTestId('section-comparable')).toContainText('Likely the same, some details missing')
     await expect(p.getByTestId('section-comparable')).toContainText("doesn't say whether it has a heatsink")
 
-    await p.getByTestId('variant-heatsink').selectOption('with')
+    await p.getByTestId('variant-heatsink-with').click()
     await expect(p.getByTestId('target-label')).toContainText('With heatsink')
     await expect(p.getByTestId('section-comparable').getByTestId('offer').first()).toContainText(/heat ?sink/i)
     await expect(p.getByTestId('section-pricecheck')).toContainText('Unusually low compared with other listings')
@@ -212,8 +215,8 @@ test.describe('DealProof comparison UI', () => {
     await p.screenshot({ path: `${SHOTS}/05-samsung-heatsink-desktop.png` })
 
     // too few independent sellers: "insufficient evidence", clearly different from "no flag"
-    await p.getByTestId('variant-capacity').selectOption('4TB')
-    await p.getByTestId('variant-heatsink').selectOption('without')
+    await p.getByTestId('variant-capacity-4TB').click()
+    await p.getByTestId('variant-heatsink-without').click()
     await expect(p.getByTestId('target-label')).toContainText('4TB')
     await expect(p.getByTestId('price-insufficient').first()).toContainText('Insufficient evidence to judge whether this price is unusual')
     await expect(p.getByTestId('section-pricecheck')).toHaveCount(0)
@@ -253,16 +256,14 @@ test.describe('DealProof comparison UI', () => {
       }
     })
     await p.goto('/search')
-    await expect(p.getByTestId('search-input')).toBeVisible({ timeout: 20_000 })
+    await expect(p.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
 
-    // client-side validation: no request is made
-    await p.getByTestId('search-input').fill('a')
-    await p.getByTestId('search-submit').click()
-    await expect(p.getByTestId('search-error')).toContainText('at least 2 characters')
+    // choosing a product (or switching products) never starts a search
+    await p.getByTestId('product-samsung').click()
+    await p.getByTestId('product-sony').click()
     expect(mocked).toBe(0)
 
     // loading, then error
-    await p.getByTestId('search-input').fill('Sony WH-1000XM5')
     await p.getByTestId('search-submit').click()
     await expect(p.getByTestId('search-loading')).toBeVisible()
     await expect(p.getByTestId('search-submit')).toBeDisabled()
@@ -280,11 +281,29 @@ test.describe('DealProof comparison UI', () => {
 
     // empty result
     mode = 'empty'
-    await p.getByTestId('search-input').fill('nothing here')
     await p.getByTestId('search-submit').click()
     await expect(p.getByTestId('search-empty')).toContainText('No retailer offers found')
     await expect(p.getByTestId('comparison')).toHaveCount(0)
-    expect(mocked).toBe(3)
+    expect(mocked).toBe(3) // exactly one request per explicit "Check live prices" click
+    expect(net.bad).toEqual([])
+  })
+
+  test('6b. the picker offers exactly the three supported products and no free-text box', async ({ users }) => {
+    const [u] = await users(1)
+    const p = u.page
+    const net = guardNoPaidCalls(p)
+    await p.goto('/search')
+    await expect(p.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
+    await expect(p.getByRole('radio')).toHaveCount(3)
+    await expect(p.getByTestId('product-sony')).toHaveAttribute('aria-checked', 'true') // one product is always selected
+    await expect(p.locator('input[type="text"], input[type="search"], textarea')).toHaveCount(0)
+    await p.getByTestId('product-logitech').click()
+    await expect(p.getByTestId('product-logitech')).toHaveAttribute('aria-checked', 'true')
+    await expect(p.getByTestId('product-sony')).toHaveAttribute('aria-checked', 'false')
+    // the live check is explicit: nothing ran just from choosing, and the demo does not search either
+    await p.getByTestId('sample-logitech').click()
+    await expect(p.getByTestId('save-unavailable')).toContainText('Saving needs a live comparison')
+    expect(net.searchCalls).toEqual([])
     expect(net.bad).toEqual([])
   })
 
@@ -294,7 +313,7 @@ test.describe('DealProof comparison UI', () => {
     const net = guardNoPaidCalls(p)
     await p.setViewportSize({ width: 390, height: 844 })
     await p.goto('/search')
-    await expect(p.getByTestId('search-input')).toBeVisible({ timeout: 20_000 })
+    await expect(p.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
     expect(await noHorizontalScroll(p)).toBe(true)
     await p.screenshot({ path: `${SHOTS}/09-search-idle-mobile.png` })
     await p.getByTestId('sample-sony').click()
@@ -312,7 +331,7 @@ test.describe('DealProof comparison UI', () => {
     expect(box!.x).toBeGreaterThanOrEqual(0)
     expect(box!.x + box!.width).toBeLessThanOrEqual(391)
     await p.screenshot({ path: `${SHOTS}/12-offer-card-mobile.png` })
-    await p.getByTestId('sample-samsung').click()
+    await p.getByTestId('product-samsung').click()
     await expect(p.getByTestId('variant-capacity')).toBeVisible()
     expect(await noHorizontalScroll(p)).toBe(true)
     expect(net.bad).toEqual([])

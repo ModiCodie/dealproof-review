@@ -11,8 +11,10 @@
 
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Bookmark, BookmarkCheck } from 'lucide-react'
 import { useMutations, useQuery } from 'deepspace'
 import { Button } from '@/components/ui'
+import { Pill } from '@/components/dp/ui'
 import type { ProductTarget } from '@/lib/matching'
 import { productKey, SAVED_COLLECTION, toSavedRow, type SavedRow } from '@/lib/saved'
 
@@ -58,17 +60,18 @@ export function SaveControl({ target, query }: { target: ProductTarget; query: s
   }
 
   return (
-    <div className="flex flex-col items-start gap-1 sm:items-end" data-testid="save-control">
+    <div className="flex flex-col items-start gap-1.5 sm:items-end" data-testid="save-control">
       {existing ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-foreground" data-testid="save-state">Saved ✓</span>
-          <Link to={`/saved/${existing.recordId}`} className="text-sm text-primary underline-offset-2 hover:underline">View saved</Link>
-          <Button type="button" variant="outline" size="sm" onClick={remove} disabled={busy || !ready} data-testid="unsave-button">
+          <Pill tone="ok" icon={BookmarkCheck} testId="save-state">Saved</Pill>
+          <Link to={`/saved/${existing.recordId}`} className="text-sm font-medium text-primary underline-offset-2 hover:underline">View saved</Link>
+          <Button type="button" variant="ghost" size="sm" onClick={remove} disabled={busy || !ready} data-testid="unsave-button">
             Remove
           </Button>
         </div>
       ) : (
         <Button type="button" size="sm" onClick={save} disabled={busy || status !== 'ready' || !ready} data-testid="save-button">
+          <Bookmark aria-hidden />
           {busy ? 'Saving…' : 'Save for later'}
         </Button>
       )}

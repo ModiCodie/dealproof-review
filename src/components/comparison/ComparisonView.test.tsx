@@ -49,7 +49,9 @@ describe('ComparisonView (rendered from real fixtures)', () => {
     expect(sonyHtml).toMatch(/Unusually low compared with other listings — \d+% below the median of \d+ independent sellers/)
     expect(sonyHtml).toContain('not evidence of a problem with the listing and not a guarantee of a good deal')
     expect(sonyHtml).toContain('rule of thumb based on other listings')
-    expect(sonyHtml).toMatch(/<summary[^>]*>Unusually low compared with other listings/) // section title
+    // The group is titled "Unusually low prices"; the full neutral explanation stays one tap away ("Why this is flagged").
+    expect(sonyHtml).toMatch(/<summary[^>]*><span[^>]*>Unusually low prices/)
+    expect(sonyHtml).toContain('Why this is flagged')
   })
 
   const headline = (html: string) => html.slice(html.indexOf('data-testid="cheapest"'), html.indexOf('data-testid="filter-summary"'))

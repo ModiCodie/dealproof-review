@@ -18,6 +18,11 @@
 
 export const THEMES = [
   {
+    id: 'dealproof',
+    label: 'DealProof',
+    description: 'The app\'s own light theme: cool off-white canvas, ink-blue accent, semantic match tones.',
+  },
+  {
     id: 'slate',
     label: 'Slate',
     description: 'Neutral dark placeholder default. Replace with your own theme.',

@@ -16,6 +16,7 @@
 import { useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { AuthGate, AuthOverlay } from 'deepspace'
+import { ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui'
 
 export default function ProtectedLayout() {
@@ -30,11 +31,14 @@ function SignedOutPanel() {
   const [showAuthModal, setShowAuthModal] = useState(false)
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-6 py-20">
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-8 text-center">
-        <h1 className="text-lg font-semibold text-foreground">Sign in to continue</h1>
+    <div className="flex min-h-[60vh] items-center justify-center px-4 py-16 sm:px-6">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center shadow-[0_4px_14px_rgba(18,23,34,0.06)]">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+          <ShieldCheck className="size-6" aria-hidden />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold text-foreground">Sign in to compare prices</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This page is only available to signed-in users.
+          Sign in to explore the demo, check live prices and save comparisons to your own list.
         </p>
         <Button className="mt-6 w-full" onClick={() => setShowAuthModal(true)}>
           Sign in

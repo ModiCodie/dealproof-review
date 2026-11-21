@@ -1,5 +1,7 @@
+import { CircleAlert } from 'lucide-react'
 import type { SearchFailure } from '@/lib/pricing-types'
 import { formatWait } from '@/lib/format'
+import { Notice } from '@/components/dp/ui'
 
 const ERROR_TITLES: Record<string, string> = {
   invalid_query: 'Check your search',
@@ -9,14 +11,21 @@ const ERROR_TITLES: Record<string, string> = {
   not_configured: 'Live search is not configured',
 }
 
+/** What the person can do next. The demo never uses a search, so it is always a safe fallback. */
+const NEXT_STEP: Record<string, string> = {
+  user_limit_reached: 'You can still explore the demo, or check live prices again tomorrow.',
+  global_budget_reached: 'You can still explore the demo, or try live prices again tomorrow.',
+  search_in_progress: 'Give it a moment; the result will be stored when it finishes.',
+  not_configured: 'You can still explore the demo.',
+}
+const DEFAULT_NEXT_STEP = 'Try again in a minute, or explore the demo.'
+
 export function ErrorPanel({ failure }: { failure: Pick<SearchFailure, 'code' | 'error' | 'retryAfterSeconds'> }) {
   return (
-    <div data-testid="search-error" role="alert" className="mt-6 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-      <p className="text-sm font-medium text-foreground">{ERROR_TITLES[failure.code] ?? 'Search failed'}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{failure.error}</p>
-      {failure.retryAfterSeconds ? (
-        <p className="mt-1 text-xs text-muted-foreground">Retry in about {formatWait(failure.retryAfterSeconds)}.</p>
-      ) : null}
-    </div>
+    <Notice testId="search-error" role="alert" tone="error" icon={CircleAlert} className="mt-6" title={ERROR_TITLES[failure.code] ?? 'Live prices could not be loaded'}>
+      <p>{failure.error}</p>
+      <p className="mt-1">{NEXT_STEP[failure.code] ?? DEFAULT_NEXT_STEP}</p>
+      {failure.retryAfterSeconds ? <p className="mt-1 text-xs">Retry in about {formatWait(failure.retryAfterSeconds)}.</p> : null}
+    </Notice>
   )
 }

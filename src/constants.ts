@@ -1,6 +1,9 @@
 /** App name — replaced by the CLI during scaffolding */
 export const APP_NAME = 'dealproof'
 
+/** The product's display name (APP_NAME is the lowercase deploy/slug name and stays unchanged). */
+export const BRAND_NAME = 'DealProof'
+
 /** Immutable app identity — data scope keys to this, so renames never
  *  strand your records.
  *
