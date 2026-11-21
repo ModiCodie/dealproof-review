@@ -13,6 +13,7 @@ import { targetForCandidate } from '../../lib/candidates'
 import { cacheKey } from '../pricing/normalize'
 import type { NormalizedOffer, ProductCandidate } from '../../lib/pricing-types'
 import snapshotSource from './snapshot.ts?raw'
+import { actions } from '../../actions'
 
 const T0 = Date.UTC(2026, 10, 21, 12, 0, 0)
 const HOUR = 3_600_000
@@ -246,5 +247,44 @@ describe('ownership, discard and legacy records', () => {
     expect(r.success && r.data.snapshot).toBeNull()
     expect(r.success && r.data.result?.candidates.length).toBeGreaterThan(0)
     expect(tools.dump(SNAPSHOT_COLLECTION)).toHaveLength(0)
+  })
+})
+
+describe('security: nothing the browser sends is trusted', () => {
+  it('capturing before the saved record exists (a race ahead of the confirmed create) writes nothing', async () => {
+    const tools = makeFakeTools()
+    await setCache(tools, [A])
+    expect(await cap(tools, 'not-created-yet')).toMatchObject({ success: false, code: 'not_found' })
+    expect(tools.dump(SNAPSHOT_COLLECTION)).toHaveLength(0)
+  })
+  it('the action takes only the saved id: supplied prices, owner or contents are ignored', async () => {
+    const tools = makeFakeTools()
+    await setCache(tools, [A, B])
+    const id = await saveAs(tools, A, 'u1')
+    const evil = [{ ...A.offers[0], title: 'EVIL INJECTED', price: 0.01 }]
+    const r = (await actions.captureSavedSnapshot({ userId: 'u1', params: { savedId: id, offers: evil, userId: 'u2', payload: { offers: evil }, candidate: { title: 'x' } }, tools, env: {} } as never)) as { success: boolean }
+    expect(r.success).toBe(true)
+    const rows = tools.dump(SNAPSHOT_COLLECTION)
+    expect(rows).toHaveLength(1)
+    expect(rows[0].data.userId).toBe('u1') // the verified caller, never a parameter
+    expect(JSON.stringify(rows[0].data)).not.toContain('EVIL INJECTED')
+    expect((rows[0].data.payload as { offers: unknown[] }).offers).toEqual(A.offers)
+  })
+  it('the stored offer count and size never exceed the limits, even for a huge cached group', async () => {
+    const tools = makeFakeTools()
+    const huge = group(5, A.title!, offers('huge', 1000, 50))
+    await setCache(tools, [huge])
+    const id = await saveAs(tools, huge)
+    await cap(tools, id)
+    const row = tools.dump(SNAPSHOT_COLLECTION)[0].data
+    expect((row.payload as { offers: unknown[] }).offers.length).toBeLessThanOrEqual(MAX_OFFERS)
+    expect(JSON.stringify(row.payload).length).toBeLessThanOrEqual(MAX_BYTES)
+  })
+  it('the caller id is required: an empty verified id is refused everywhere', async () => {
+    const tools = makeFakeTools()
+    await setCache(tools, [A])
+    const id = await saveAs(tools, A, 'u1')
+    expect(await cap(tools, id, '')).toMatchObject({ success: false, code: 'not_found' })
+    expect(await discardSavedSnapshot(id, { tools, userId: '' })).toEqual({ success: true, data: { discarded: false } })
   })
 })
