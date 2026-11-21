@@ -12,7 +12,8 @@
 import { FAMILIES } from './matching'
 import type { FamilyId } from './matching'
 
-export type CatalogKey = 'sony' | 'logitech' | 'samsung'
+/** Stable id of a catalog entry (used in `?product=` and test ids). Plain string so entries can be added without touching the UI. */
+export type CatalogKey = string
 
 export interface CatalogProduct {
   key: CatalogKey

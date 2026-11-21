@@ -26,7 +26,7 @@ import { CATALOG, SUPPORTED_COUNT, variantSummary } from '../lib/catalog'
 import { seo } from '../seo'
 
 const STEPS = [
-  { n: 1, title: 'Pick a product', text: 'Choose one of the supported products and, where it matters, the variant, such as storage size or edition.' },
+  { n: 1, title: 'Pick a product', text: 'Choose a product and, where it matters, the variant, such as storage size or edition.' },
   { n: 2, title: 'We match every listing', text: 'Each retailer listing is checked against your exact model and variant using fixed rules, with a stated reason for every decision.' },
   { n: 3, title: 'Compare what is comparable', text: 'See the lowest reported offer, a clear retailer table, and what still needs verification.' },
 ]
@@ -60,7 +60,7 @@ export default function Landing() {
         <main>
           <section className="mx-auto grid max-w-5xl gap-10 px-4 py-12 sm:px-6 sm:py-20 lg:grid-cols-[1.15fr_1fr] lg:items-center">
             <div>
-              <p className="text-sm font-medium text-primary">Price comparison for {SUPPORTED_COUNT} products</p>
+              <p className="text-sm font-medium text-primary">Price comparison · {SUPPORTED_COUNT} products available now</p>
               <h1 className="mt-3 text-4xl font-semibold leading-tight text-foreground sm:text-5xl">
                 Compare prices without comparing the wrong products
               </h1>
@@ -100,8 +100,8 @@ export default function Landing() {
 
           <section className="border-y border-border bg-card">
             <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-              <h2 className="text-2xl font-semibold text-foreground">Supported products</h2>
-              <p className="mt-1 text-muted-foreground">DealProof is built around a few products it can match accurately.</p>
+              <h2 className="text-2xl font-semibold text-foreground">Products available now</h2>
+              <p className="mt-1 text-muted-foreground">These products have tuned matching rules today.</p>
               <ul className="mt-6 grid gap-4 sm:grid-cols-3">
                 {CATALOG.map((p) => (
                   <li key={p.key}>

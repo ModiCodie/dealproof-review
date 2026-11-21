@@ -66,6 +66,8 @@ test('API status page renders loading success and error states', async ({ users 
   const [user] = await users(1)
   let shouldFail = false
   let requestCount = 0
+  let release!: () => void
+  const releaseFirst = new Promise<void>((resolve) => { release = resolve })
 
   await user.page.route('**/api/integrations', async (route) => {
     requestCount += 1
@@ -78,7 +80,9 @@ test('API status page renders loading success and error states', async ({ users 
       return
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    // Hold the first response until the test has seen the loading state. A fixed delay (it was 100 ms) is
+    // shorter than Playwright's polling gaps on a busy machine, so the loading text could be missed.
+    if (requestCount === 1) await releaseFirst
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -88,6 +92,7 @@ test('API status page renders loading success and error states', async ({ users 
 
   await user.page.goto('/api-status')
   await expect(user.page.getByText('Loading integration catalog...')).toBeVisible()
+  release()
   await expect(user.page.getByText('Integration catalog ready')).toBeVisible()
   await expect(user.page.getByText('2 integrations available.')).toBeVisible()
 

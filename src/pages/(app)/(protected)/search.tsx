@@ -1,15 +1,18 @@
 /**
  * Compare page (route /search).
  *
- * DealProof compares a small, fixed set of products accurately, so this page is
- * a product picker, not a free-text search box. Two explicit actions:
+ * For now DealProof only has matching rules for a short list of products
+ * (src/lib/catalog.ts), so this page offers a product picker instead of a
+ * free-text box. The picker is driven entirely by that list and the rest of the
+ * page only sees a product + variant target, so a different way of choosing a
+ * product can replace <ProductPicker> without touching the comparison. Two explicit actions:
  *   - Explore demo        bundled sample data; free; never saved.
  *   - Check live prices   the PricesAPI-backed server action (per-user daily
  *                         limit, 12-hour cache). It runs ONLY when this button
  *                         is pressed: choosing a product, switching variants
  *                         or navigating never starts a paid search.
- * The server still validates every query; the three queries sent here are the
- * same ones the previous text box was used with (see src/lib/catalog.ts).
+ * The server still validates every query; the queries sent here are the same
+ * ones the previous text box was used with (see src/lib/catalog.ts).
  *
  * Flow: live check -> searchProducts() -> POST /api/actions/searchProducts ->
  * Worker action -> cache / PricesAPI -> normalized result -> matched and
@@ -108,14 +111,14 @@ export default function SearchPage() {
   return (
     <Page>
       <header className="max-w-2xl">
-        <p className="text-sm font-medium text-primary">Price comparison · {SUPPORTED_COUNT} supported products</p>
+        <p className="text-sm font-medium text-primary">Price comparison · {SUPPORTED_COUNT} products available now</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground sm:text-4xl">Compare the right listings, not just the cheapest</h1>
         <p className="mt-3 text-base text-muted-foreground">
           Pick a product, then explore a demo or check live prices. Every listing is matched by model and variant first, so a 1TB drive is never compared with a 2TB one.
         </p>
       </header>
 
-      <ProductPicker value={productKey} onChange={choose} disabled={loading} />
+      <ProductPicker products={CATALOG} value={productKey} onChange={choose} disabled={loading} />
 
       <section className="mt-8" aria-labelledby="how-heading" data-testid="sample-picker">
         <h2 id="how-heading" className="text-sm font-semibold text-foreground">
@@ -158,12 +161,12 @@ export default function SearchPage() {
 
 // ------------------------------------------------------------------ picker
 
-function ProductPicker({ value, onChange, disabled }: { value: CatalogKey; onChange: (k: CatalogKey) => void; disabled: boolean }) {
+function ProductPicker({ products, value, onChange, disabled }: { products: readonly CatalogProduct[]; value: CatalogKey; onChange: (k: CatalogKey) => void; disabled: boolean }) {
   const move = (e: KeyboardEvent, i: number) => {
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
     if (!step) return
     e.preventDefault()
-    const next = CATALOG[(i + step + CATALOG.length) % CATALOG.length]
+    const next = products[(i + step + products.length) % products.length]
     onChange(next.key)
     ;(e.currentTarget.parentElement?.querySelector(`[data-key="${next.key}"]`) as HTMLElement | null)?.focus()
   }
@@ -173,8 +176,8 @@ function ProductPicker({ value, onChange, disabled }: { value: CatalogKey; onCha
         <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground" aria-hidden>1</span>
         Choose a product
       </h2>
-      <div role="radiogroup" aria-labelledby="pick-heading" data-testid="product-picker" className="mt-3 grid gap-3 sm:grid-cols-3">
-        {CATALOG.map((p, i) => {
+      <div role="radiogroup" aria-labelledby="pick-heading" data-testid="product-picker" className="mt-3 grid gap-3 sm:grid-cols-[repeat(auto-fit,minmax(15rem,1fr))]">
+        {products.map((p, i) => {
           const selected = p.key === value
           return (
             <button
