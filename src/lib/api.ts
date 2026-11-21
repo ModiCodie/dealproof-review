@@ -8,7 +8,7 @@
 
 import { getAuthToken } from 'deepspace'
 import type { SearchActionResult } from './pricing-types'
-import type { SavedComparisonResult } from './saved'
+import type { CaptureResult, SavedComparisonResult } from './saved'
 
 /** Longer than the server's upstream timeout (90 s) so the server answers first. */
 const CLIENT_TIMEOUT_MS = 110_000
@@ -72,3 +72,32 @@ export async function getSavedComparison(savedId: string, signal?: AbortSignal):
     return { success: false, code: 'internal_error', error: 'Could not reach the server. Check your connection and try again.' }
   }
 }
+
+async function callSavedAction<T>(name: string, savedId: string, signal?: AbortSignal): Promise<T | { success: false; code: 'internal_error'; error: string }> {
+  const fail = (error: string) => ({ success: false as const, code: 'internal_error' as const, error })
+  const token = await getAuthToken()
+  if (!token) return fail('You are signed out. Please sign in again.')
+  try {
+    const res = await fetch(`/api/actions/${name}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ savedId }),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
+    })
+    if (res.status === 401) return fail('Your session expired. Please sign in again.')
+    const body = (await res.json()) as { success?: unknown }
+    return typeof body === 'object' && body !== null && typeof body.success === 'boolean' ? (body as T) : fail('Unexpected response from the server.')
+  } catch (e) {
+    if (signal?.aborted) throw e
+    return fail('Could not reach the server. Check your connection and try again.')
+  }
+}
+
+/**
+ * Ask the server to store the last captured prices for a saved general product, copied from its own cache.
+ * Never calls PricesAPI, never uses quota, and changes nothing if the saved product cannot be confirmed.
+ */
+export const captureSavedSnapshot = (savedId: string, signal?: AbortSignal) => callSavedAction<CaptureResult>('captureSavedSnapshot', savedId, signal)
+
+/** Best-effort cleanup after a saved product was removed. A failure only leaves data the next capture sweeps. */
+export const discardSavedSnapshot = (savedId: string) => callSavedAction<{ success: true; data: { discarded: boolean } }>('discardSavedSnapshot', savedId).catch(() => undefined)

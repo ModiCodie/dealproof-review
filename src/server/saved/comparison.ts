@@ -20,6 +20,7 @@ import { validateQuery } from '../pricing/normalize'
 import { countUserClaims, StorageError, utcDay } from '../pricing/quota'
 import { loadConfig } from '../pricing/config'
 import { readCacheForQuery, toResult } from '../pricing/search'
+import { readSnapshot } from './snapshot'
 
 export interface SavedDeps {
   tools: ActionTools
@@ -50,10 +51,12 @@ export async function getSavedComparison(rawId: unknown, deps: SavedDeps): Promi
     const t = now()
     const cached = await readCacheForQuery(tools, v.query)
     const used = await countUserClaims(tools, userId, utcDay(t))
+    const snapshot = row.family === 'generic' ? await readSnapshot(tools, rawId, userId) : null
     return {
       success: true,
       data: {
         saved: { recordId: rawId, query: v.query, family: row.family, variant: row.variant ?? {} },
+        snapshot,
         result: cached ? toResult(v.query, cached.row) : null,
         stale: cached ? cached.row.expiresAtMs <= t : false,
         quota: { userDailyLimit: cfg.userDailyLimit, userRemainingToday: Math.max(0, cfg.userDailyLimit - used) },

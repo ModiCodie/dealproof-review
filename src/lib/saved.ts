@@ -15,7 +15,7 @@
 import { FAMILIES, targetLabel } from './matching'
 import { normalizeText } from './matching/text'
 import type { FamilyId, GenericSpec, GenericTarget, ProductTarget } from './matching'
-import type { ProductCandidate, SearchQuota, SearchResult } from './pricing-types'
+import type { NormalizedOffer, ProductCandidate, SearchQuota, SearchResult, SearchSource } from './pricing-types'
 import { candidateRef, resolveCandidate, type CandidateRef, type Resolution } from './saved-candidate'
 
 export const SAVED_COLLECTION = 'saved_products'
@@ -192,11 +192,32 @@ export interface SavedComparisonFailure {
  * when the stored data is older than the cache window: it is still returned,
  * labelled, and never refreshed automatically.
  */
+/** The last successfully captured prices for a saved generic product (see src/server/saved/snapshot.ts). */
+export interface SavedSnapshot {
+  /** When DealProof stored it. */
+  capturedAt: string
+  /** The price feed's own observation time and cache state for these prices. */
+  source: SearchSource
+  /** The product group the snapshot belongs to. */
+  candidate: CandidateRef
+  /** Only the saved group's listings. */
+  offers: NormalizedOffer[]
+  /** True when the group had more listings than were kept. */
+  truncated: boolean
+}
+
 export interface SavedComparisonData {
   saved: { recordId: string; query: string; family: string; variant: Record<string, string> }
+  /** Generic saved products: the last captured prices. null = none yet (older record, or never captured). */
+  snapshot?: SavedSnapshot | null
   result: SearchResult | null
   stale: boolean
   quota: SearchQuota
 }
 
 export type SavedComparisonResult = { success: true; data: SavedComparisonData } | SavedComparisonFailure
+
+/** Result of asking the server to (re)capture a saved product's prices from its stored search data. */
+export type CaptureResult =
+  | { success: true; data: { captured: true; snapshot: SavedSnapshot } | { captured: false; reason: 'identity_unconfirmed' | 'no_stored_data' | 'not_newer' | 'not_applicable'; detail: string } }
+  | SavedComparisonFailure

@@ -19,7 +19,7 @@ import { Button } from '@/components/ui'
 import { Notice, Page, Skeleton } from '@/components/dp/ui'
 import { ProductIcon } from '@/components/dp/ProductIcon'
 import { formatPrice } from '@/components/comparison/ComparisonView'
-import { getSavedComparison } from '@/lib/api'
+import { discardSavedSnapshot, getSavedComparison } from '@/lib/api'
 import { formatAge, formatDate } from '@/lib/format'
 import { buildComparison } from '@/lib/matching'
 import { parseSaved, savedOffers, SAVED_COLLECTION, type SavedProduct, type SavedRow } from '@/lib/saved'
@@ -37,6 +37,7 @@ export default function SavedPage() {
   async function remove(id: string) {
     try {
       await removeConfirmed(id)
+      void discardSavedSnapshot(id)
       setNotice('Removed from your saved products.')
     } catch {
       setNotice('Could not remove it. Please try again.')
@@ -169,6 +170,7 @@ function SavedCard({
 type Last =
   | { status: 'loading' }
   | { status: 'none' }
+  | { status: 'no_headline' }
   | { status: 'ok'; price: string; seller: string | null; observed: string | null; storedAgo: string | null; stale: boolean; flagged: boolean }
 
 /** The lowest reported matching offer in the data already stored for this product. Read-only; never a paid search. */
@@ -181,20 +183,22 @@ function LastPrice({ id, saved }: { id: string; saved: SavedProduct }) {
     const c = new AbortController()
     getSavedComparison(id, c.signal)
       .then((r) => {
-        if (!r.success || !r.data.result) return setLast({ status: 'none' })
-        const { result, stale } = r.data
-        // same scoping as the detail page, so the list never shows another product group's price
-        const { offers } = savedOffers(savedRef.current, result.candidates)
-        const cheapest = offers.length ? buildComparison(savedRef.current.target, offers, result.source.scrapedAt).cheapest : null
-        if (!cheapest) return setLast({ status: 'none' })
+        if (!r.success || (!r.data.result && !r.data.snapshot)) return setLast({ status: 'none' })
+        const { result, stale: cacheStale } = r.data
+        // same source as the detail page: the last captured prices when there are any, else the stored search scoped to
+        // the saved product group. The list never shows another product group's price.
+        const snap = r.data.snapshot
+        const offers = snap ? snap.offers : savedOffers(savedRef.current, result?.candidates ?? []).offers
+        const cheapest = offers.length ? buildComparison(savedRef.current.target, offers, snap ? snap.source.scrapedAt : result?.source.scrapedAt ?? null).cheapest : null
+        if (!cheapest) return setLast(offers.length ? { status: 'no_headline' } : { status: 'none' })
         const o = cheapest.offer
         setLast({
           status: 'ok',
           price: formatPrice(o.offer.price, o.offer.currency),
           seller: o.seller.raw,
-          observed: formatDate(result.source.scrapedAt),
-          storedAgo: formatAge(result.cachedAt),
-          stale,
+          observed: formatDate(snap ? snap.source.scrapedAt : result!.source.scrapedAt),
+          storedAgo: formatAge(snap ? snap.capturedAt : result!.cachedAt),
+          stale: snap ? Date.now() - new Date(snap.capturedAt).getTime() > 12 * 3_600_000 : cacheStale,
           flagged: cheapest.flagged,
         })
       })
@@ -207,6 +211,7 @@ function LastPrice({ id, saved }: { id: string; saved: SavedProduct }) {
   return (
     <div className="mt-4 rounded-xl bg-muted/60 px-4 py-3" data-testid="saved-last-price">
       {last.status === 'loading' && <Skeleton className="h-10 w-2/3" />}
+      {last.status === 'no_headline' && <p className="text-sm text-muted-foreground">No reliable lowest price in the last saved data. Open it to see the listings.</p>}
       {last.status === 'none' && <p className="text-sm text-muted-foreground">No stored prices yet. Open it to get fresh prices.</p>}
       {last.status === 'ok' && (
         <>

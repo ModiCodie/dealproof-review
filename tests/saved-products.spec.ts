@@ -563,6 +563,8 @@ test.describe('two accounts: ownership is enforced by the server', () => {
     await expect(a.page.getByTestId('save-button')).toBeEnabled()
     await a.page.getByTestId('save-button').click()
     await expect(a.page.getByTestId('save-state')).toBeVisible()
+    // the real server action ran (searches are mocked, so its cache is empty): the save stands and says the prices were not stored
+    await expect(a.page.getByTestId('save-message')).toContainText('could not be stored')
 
     expect(await savedNames(a.page)).toHaveLength(1)
     await expect(a.page.getByTestId('saved-name')).toContainText('SN850X')
@@ -583,61 +585,129 @@ test.describe('two accounts: ownership is enforced by the server', () => {
     await expect(a.page.getByTestId('saved-empty')).toBeVisible()
   })
 
-  test('14. a saved general comparison keeps its product group: reopen, refresh (reordered / gone), and a missing group', async ({ users }) => {
+  test('14. a saved general comparison keeps its product group and its last captured prices through refreshes', async ({ users }) => {
     const [a] = await users(1)
     const p = a.page
     const n = net(p)
     const Q = 'WD Black SN850X'
     const [g2tb, g1tb] = SSD.candidates
+    const snapFor = (g: { pid: number; catalogId: string | null; clusterId: string | null; title: string; offers: { price: number }[] }, capturedAt: Date, bump = 0) => ({
+      capturedAt: capturedAt.toISOString(),
+      source: { ...SSD.source, scrapedAt: capturedAt.toISOString() },
+      candidate: { pid: String(g.pid), catalogId: g.catalogId, clusterId: g.clusterId, title: g.title },
+      offers: g.offers.map((o) => ({ ...o, price: o.price + bump })),
+      truncated: false,
+    })
+    // a scripted stand-in for the server's snapshot store (its real logic is covered in src/server/saved/snapshot.test.ts)
+    let snap: ReturnType<typeof snapFor> | null = null
+    let captureAnswer: () => unknown = () => ({ success: true, data: { captured: true, snapshot: snap } })
+    await p.route('**/api/actions/captureSavedSnapshot', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify(captureAnswer()) }))
+    await p.route('**/api/actions/discardSavedSnapshot', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { discarded: true } }) }))
     await clearOwn(p)
+
+    // 1. pick the 1TB group and save: the prices are captured with it
     await mockSearch(p, SSD, Q)
     await p.goto('/search')
     await p.getByTestId('product-search-input').fill(Q)
     await p.getByTestId('product-search-input').press('Enter')
     await expect(p.getByTestId('candidate-picker')).toBeVisible({ timeout: 20_000 })
-    await p.getByTestId('candidate-1').click() // the 1TB group
+    await p.getByTestId('candidate-1').click()
     await expect(p.getByTestId('comparison')).toBeVisible()
     await expect(p.getByTestId('save-button')).toBeEnabled()
+    snap = snapFor(g1tb, new Date(Date.now() - 3 * 3_600_000))
     await p.getByTestId('save-button').click()
-    await expect(p.getByTestId('save-state')).toBeVisible()
+    await expect(p.getByTestId('save-message')).toContainText('Saved with these prices')
 
-    const reopen = async (fx: Fx) => {
+    const reopen = async (opts: { snapshot: typeof snap; candidates?: unknown[] }) => {
       await p.unroute('**/api/actions/getSavedComparison').catch(() => {})
-      await mockSaved(p, fx, Q, { stale: false, cachedAt: new Date() })
+      await p.route('**/api/actions/getSavedComparison', (r) => {
+        const { savedId } = r.request().postDataJSON()
+        const result = opts.candidates ? (searchBody({ ...SSD, candidates: opts.candidates }, Q, new Date()).data as { result: unknown }).result : null
+        return r.fulfill({ contentType: 'application/json', body: JSON.stringify(ok({ saved: { recordId: savedId, query: Q, family: '', variant: {} }, snapshot: opts.snapshot, result, stale: false, quota: { userDailyLimit: 3, userRemainingToday: 2 } })) })
+      })
       await p.goto('/saved')
       await expect(p.getByTestId('saved-list')).toBeVisible({ timeout: 20_000 })
       await p.getByTestId('saved-open').first().click()
     }
-    // 1. reopen: the saved group only, never the 2TB group's listings, and no search
-    await reopen(SSD)
-    await expect(p.getByTestId('saved-candidate')).toContainText('1TB', { timeout: 20_000 })
+
+    // 2. reopen with the shared cache GONE: the saved group and prices still show, labelled as the last saved prices, no search
+    await reopen({ snapshot: snap })
+    await expect(p.getByTestId('snapshot-status')).toContainText('Last saved prices', { timeout: 20_000 })
+    await expect(p.getByTestId('saved-candidate')).toContainText('1TB')
     await expect(p.getByTestId('comparison')).toBeVisible()
     await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
-    await expect(p.getByTestId('comparison')).not.toContainText('Heatsink')
-    expect(n.searchCalls).toBe(1) // only the original search; opening a saved product ran none
+    await expect(p.getByTestId('cached-at')).toBeVisible()
+    expect(n.searchCalls).toBe(1) // only the original search
 
-    // 2. explicit refresh when the group order changed: still the same group
+    // 3. refresh returns reordered candidates: the same group is found and its prices are updated
+    const before = await p.getByTestId('cached-at').innerText()
     await p.unroute('**/api/actions/searchProducts')
     await mockSearch(p, { ...SSD, candidates: [g1tb, g2tb] }, Q)
+    snap = snapFor(g1tb, new Date(), 5)
     await p.getByTestId('refresh-button').click()
-    await expect(p.getByTestId('refresh-note')).toBeVisible()
-    await expect(p.getByTestId('refresh-note')).not.toContainText('could not be identified')
-    await expect(p.getByTestId('saved-candidate')).toContainText('1TB')
-    await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
+    await expect(p.getByTestId('refresh-note')).toContainText('Newly refreshed prices')
+    await expect(p.getByTestId('identity-unconfirmed')).toHaveCount(0)
+    await expect(p.getByTestId('refresh-failed')).toHaveCount(0)
+    expect(await p.getByTestId('cached-at').innerText()).not.toBe(before)
+    const kept = await p.getByTestId('cached-at').innerText()
 
-    // 3. explicit refresh when the saved group is gone: no switch, snapshot kept, reason stated
+    // 4. refresh where the saved group cannot be confirmed: clear notice, prices and capture time unchanged, no other group shown
     await p.unroute('**/api/actions/searchProducts')
     await mockSearch(p, { ...SSD, candidates: [g2tb] }, Q)
+    captureAnswer = () => ({ success: true, data: { captured: false, reason: 'identity_unconfirmed', detail: 'No product group with this title is in the stored data any more.' } })
     await p.getByTestId('refresh-button').click()
-    await expect(p.getByTestId('refresh-note')).toContainText('could not be identified')
+    await expect(p.getByTestId('identity-unconfirmed')).toContainText('could not confirm the product')
+    await expect(p.getByTestId('identity-unconfirmed')).toContainText('did not switch to another product')
+    await expect(p.getByTestId('refresh-note')).toHaveCount(0)
+    expect(await p.getByTestId('cached-at').innerText()).toBe(kept)
+    await expect(p.getByTestId('snapshot-status')).toContainText('Last saved prices')
     await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
-    await expect(p.getByTestId('saved-candidate')).toContainText('1TB')
 
-    // 4. reopening against data that no longer has the group: a limitation, nothing compared
-    await reopen({ ...SSD, candidates: [g2tb] })
+    // 5. the refresh itself fails: "refresh unsuccessful", saved prices unchanged
+    await p.unroute('**/api/actions/searchProducts')
+    await p.route('**/api/actions/searchProducts', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: false, code: 'user_limit_reached', error: 'You have used your 3 fresh searches today.', retryAfterSeconds: 7200 }) }))
+    await p.getByTestId('refresh-button').click()
+    await expect(p.getByTestId('refresh-failed')).toContainText('Refresh unsuccessful')
+    await expect(p.getByTestId('refresh-failed')).toContainText('were not changed')
+    expect(await p.getByTestId('cached-at').innerText()).toBe(kept)
+
+    // 6. sign-in/reload later: the same saved prices, from the server's snapshot, not the cache
+    await reopen({ snapshot: snap })
+    await expect(p.getByTestId('saved-candidate')).toContainText('1TB', { timeout: 20_000 })
+    await expect(p.getByTestId('snapshot-status')).toBeVisible()
+
+    // 7. an older record with no snapshot, against data that no longer has its group: a limitation, nothing compared
+    await reopen({ snapshot: null, candidates: [g2tb] })
     await expect(p.getByTestId('candidate-unresolved')).toBeVisible({ timeout: 20_000 })
     await expect(p.getByTestId('comparison')).toHaveCount(0)
     expect(n.pricesapi).toEqual([])
+    await clearOwn(p)
+  })
+
+  test('14b. two different groups of one search are saved separately and removing one keeps the other', async ({ users }) => {
+    const [a] = await users(1)
+    const p = a.page
+    const Q = 'WD Black SN850X'
+    await p.route('**/api/actions/captureSavedSnapshot', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { captured: false, reason: 'no_stored_data', detail: 'x' } }) }))
+    await p.route('**/api/actions/discardSavedSnapshot', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, data: { discarded: true } }) }))
+    await clearOwn(p)
+    await mockSearch(p, SSD, Q)
+    for (const i of [0, 1]) {
+      await p.goto('/search')
+      await p.getByTestId('product-search-input').fill(Q)
+      await p.getByTestId('product-search-input').press('Enter')
+      await expect(p.getByTestId('candidate-picker')).toBeVisible({ timeout: 20_000 })
+      await p.getByTestId(`candidate-${i}`).click()
+      await expect(p.getByTestId('save-button')).toBeEnabled()
+      await p.getByTestId('save-button').click()
+      await expect(p.getByTestId('save-state')).toBeVisible()
+    }
+    expect(await savedNames(p)).toHaveLength(2)
+    const names = await savedNames(p)
+    expect(new Set(names).size).toBe(2)
+    await p.getByTestId('saved-remove').first().click()
+    await p.getByTestId('saved-remove-confirm').click()
+    await expect.poll(async () => (await savedNames(p)).length).toBe(1)
     await clearOwn(p)
   })
 })

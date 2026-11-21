@@ -16,6 +16,7 @@ import { useMutations, useQuery } from 'deepspace'
 import { Button } from '@/components/ui'
 import { Pill } from '@/components/dp/ui'
 import type { ProductTarget } from '@/lib/matching'
+import { captureSavedSnapshot, discardSavedSnapshot } from '@/lib/api'
 import type { ProductCandidate } from '@/lib/pricing-types'
 import { productKey, SAVED_COLLECTION, toSavedRow, type SavedRow } from '@/lib/saved'
 
@@ -36,8 +37,16 @@ export function SaveControl({ target, query, candidate }: { target: ProductTarge
     setBusy(true)
     setMessage(null)
     try {
-      await createConfirmed(toSavedRow(target, query, candidate))
-      setMessage('Saved. DealProof does not monitor prices; reopen it from Saved and refresh when you want new data.')
+      const id = await createConfirmed(toSavedRow(target, query, candidate))
+      let note = 'Saved. DealProof does not monitor prices; reopen it from Saved and refresh when you want new data.'
+      if (target.family === 'generic') {
+        // keep the prices you just compared, so reopening never depends on the shared cache
+        const r = await captureSavedSnapshot(id)
+        note = r.success && r.data.captured
+          ? 'Saved with these prices. DealProof does not monitor prices; reopen it from Saved and refresh when you want new data.'
+          : 'Saved, but its prices could not be stored. Open it from Saved and use “Get fresh prices”. DealProof does not monitor prices.'
+      }
+      setMessage(note)
     } catch (e) {
       const text = e instanceof Error ? e.message : String(e)
       setMessage(/duplicate|already exists/i.test(text) ? 'Already saved.' : 'Could not save. Please try again.')
@@ -52,6 +61,7 @@ export function SaveControl({ target, query, candidate }: { target: ProductTarge
     setMessage(null)
     try {
       await removeConfirmed(existing.recordId)
+      void discardSavedSnapshot(existing.recordId)
       setMessage('Removed from your saved products.')
     } catch {
       setMessage('Could not remove. Please try again.')

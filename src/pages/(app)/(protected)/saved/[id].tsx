@@ -18,16 +18,16 @@ import { ComparisonView } from '@/components/comparison/ComparisonView'
 import { ErrorPanel } from '@/components/SearchPanels'
 import { Notice, Page, Skeleton } from '@/components/dp/ui'
 import { usePageTitle } from '@/lib/use-page-title'
-import { getSavedComparison, searchProducts } from '@/lib/api'
+import { captureSavedSnapshot, discardSavedSnapshot, getSavedComparison, searchProducts } from '@/lib/api'
 import { formatAge, formatTime } from '@/lib/format'
 import type { SearchFailure, SearchQuota, SearchResult } from '@/lib/pricing-types'
-import { parseSaved, savedOffers, SAVED_COLLECTION, type SavedRow } from '@/lib/saved'
+import { parseSaved, savedOffers, SAVED_COLLECTION, type SavedRow, type SavedSnapshot } from '@/lib/saved'
 import { UNRESOLVED_TEXT } from '@/lib/saved-candidate'
 
 type Load =
   | { status: 'loading' }
   | { status: 'error'; message: string }
-  | { status: 'ready'; result: SearchResult | null; stale: boolean; quota: SearchQuota }
+  | { status: 'ready'; result: SearchResult | null; stale: boolean; quota: SearchQuota; snapshot: SavedSnapshot | null }
 
 export default function SavedProductPage() {
   const { id = '' } = useParams()
@@ -45,6 +45,8 @@ export default function SavedProductPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [refreshFailure, setRefreshFailure] = useState<SearchFailure | null>(null)
   const [refreshNote, setRefreshNote] = useState<string | null>(null)
+  // Why the last refresh did not update the prices: the search failed, or the saved product could not be confirmed in the result.
+  const [refreshProblem, setRefreshProblem] = useState<{ kind: 'unconfirmed' | 'not_stored'; detail: string } | null>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [removeError, setRemoveError] = useState<string | null>(null)
 
@@ -55,7 +57,7 @@ export default function SavedProductPage() {
     setLoad({ status: 'loading' })
     getSavedComparison(id, c.signal)
       .then((r) => {
-        setLoad(r.success ? { status: 'ready', result: r.data.result, stale: r.data.stale, quota: r.data.quota } : { status: 'error', message: r.error })
+        setLoad(r.success ? { status: 'ready', result: r.data.result, stale: r.data.stale, quota: r.data.quota, snapshot: r.data.snapshot ?? null } : { status: 'error', message: r.error })
       })
       .catch(() => {
         /* aborted */
@@ -68,34 +70,46 @@ export default function SavedProductPage() {
     setRefreshing(true)
     setRefreshFailure(null)
     setRefreshNote(null)
+    setRefreshProblem(null)
     try {
       const r = await searchProducts(saved.query)
-      if (r.success && saved.candidate && savedOffers(saved, r.data.result.candidates).resolution?.status !== 'matched') {
-        // Never switch to a different product group: keep what is shown and say why.
-        setRefreshNote(
-          'Fresh prices were fetched, but the product you saved could not be identified in them with confidence, so DealProof did not switch to another product. The comparison below is unchanged: it is the snapshot you already had open. Reopening this saved product later will read the newly stored data and show a limitation instead.',
-        )
-        setLoad((l) => (l.status === 'ready' ? { ...l, quota: r.data.quota } : l))
-      } else if (r.success) {
-        setLoad({ status: 'ready', result: r.data.result, stale: false, quota: r.data.quota })
-        setRefreshNote(
-          r.data.fromCache
-            ? 'The stored data was still inside the 12-hour window, so no new search was run and no search was used.'
-            : 'Fetched new prices. This used one of your fresh searches today.',
-        )
+      if (!r.success) {
+        setRefreshFailure(r) // nothing was changed: the last saved prices stay as they were
+        return
+      }
+      const fromCacheNote = r.data.fromCache
+        ? 'The stored data was still inside the 12-hour window, so no new search was run and no search was used.'
+        : 'Fetched new prices. This used one of your fresh searches today.'
+      if (!saved.candidate) {
+        setLoad({ status: 'ready', result: r.data.result, stale: false, quota: r.data.quota, snapshot: null })
+        setRefreshNote(fromCacheNote)
+        return
+      }
+      // General products: the server copies this product group's prices into the saved snapshot, or changes nothing.
+      const cap = await captureSavedSnapshot(id)
+      if (cap.success && cap.data.captured) {
+        setLoad({ status: 'ready', result: r.data.result, stale: false, quota: r.data.quota, snapshot: cap.data.snapshot })
+        setRefreshNote(fromCacheNote)
       } else {
-        setRefreshFailure(r)
+        // never switch to another product group, never overwrite what was saved
+        setLoad((l) => (l.status === 'ready' ? { ...l, quota: r.data.quota } : l))
+        setRefreshProblem(
+          cap.success && !cap.data.captured
+            ? { kind: cap.data.reason === 'identity_unconfirmed' ? 'unconfirmed' : 'not_stored', detail: cap.data.detail }
+            : { kind: 'not_stored', detail: 'The new prices could not be saved. Your saved prices were not changed.' },
+        )
       }
     } catch {
       /* aborted */
     } finally {
       setRefreshing(false)
     }
-  }, [saved, refreshing])
+  }, [saved, refreshing, id])
 
   async function remove() {
     try {
       await removeConfirmed(id)
+      void discardSavedSnapshot(id)
       navigate('/saved')
     } catch {
       setRemoveError('Could not remove it. Please try again.')
@@ -129,14 +143,19 @@ export default function SavedProductPage() {
   }
 
   const result = load.status === 'ready' ? load.result : null
-  const hasOffers = !!result && result.candidates.some((c) => c.offers.length > 0)
+  const snapshot = load.status === 'ready' ? load.snapshot : null
+  const hasOffers = (!!result && result.candidates.some((c) => c.offers.length > 0)) || !!snapshot
   // Generic products compare only the saved product group; see savedOffers.
-  const { offers, resolution } = result ? savedOffers(saved, result.candidates) : { offers: [], resolution: null }
-  const unresolved = hasOffers && resolution?.status === 'unresolved' ? resolution : null
+  // A saved snapshot (the last captured prices) is what a general product shows; the shared cache is only a fallback for
+  // records that have none yet, and for the specialised families.
+  const { offers, resolution } = snapshot ? { offers: snapshot.offers, resolution: null } : result ? savedOffers(saved, result.candidates) : { offers: [], resolution: null }
+  const unresolved = !snapshot && hasOffers && resolution?.status === 'unresolved' ? resolution : null
+  const snapshotAgeMs = snapshot ? Date.now() - new Date(snapshot.capturedAt).getTime() : 0
+  const snapshotOld = snapshotAgeMs > 12 * 3_600_000
   const quota = load.status === 'ready' ? load.quota : null
-  const stale = load.status === 'ready' && load.stale
+  const stale = load.status === 'ready' && !snapshot && load.stale
   const missing = load.status === 'ready' && !hasOffers
-  const needsSearch = stale || missing
+  const needsSearch = stale || missing || snapshotOld
 
   return (
     <Shell>
@@ -177,21 +196,33 @@ export default function SavedProductPage() {
       {load.status === 'ready' && (
         <section className="mt-6 rounded-2xl border border-border bg-card p-4 shadow-[0_1px_2px_rgba(18,23,34,0.05)] sm:p-5" data-testid="data-status">
           <h2 className="text-base font-semibold text-foreground">Price data</h2>
-          {hasOffers && result ? (
-            <dl className="mt-3 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-muted-foreground">Prices observed by source</dt>
-                <dd className="mt-0.5 text-foreground" data-testid="observed-at">
-                  {formatTime(result.source.scrapedAt) ?? 'Unknown'}
-                  {result.source.scrapedAt ? ` (${formatAge(result.source.scrapedAt)})` : ''}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Stored by DealProof</dt>
-                <dd className="mt-0.5 text-foreground" data-testid="cached-at">{formatTime(result.cachedAt)} ({formatAge(result.cachedAt)})</dd>
-              </div>
-            </dl>
-          ) : null}
+          {hasOffers && (snapshot || result) ? (() => {
+            const observed = snapshot ? snapshot.source.scrapedAt : result!.source.scrapedAt
+            const storedAt = snapshot ? snapshot.capturedAt : result!.cachedAt
+            return (
+              <dl className="mt-3 grid gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+                <div>
+                  <dt className="text-xs text-muted-foreground">Prices observed by source</dt>
+                  <dd className="mt-0.5 text-foreground" data-testid="observed-at">
+                    {formatTime(observed) ?? 'Unknown'}
+                    {observed ? ` (${formatAge(observed)})` : ''}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">{snapshot ? 'Last captured by DealProof' : 'Stored by DealProof'}</dt>
+                  <dd className="mt-0.5 text-foreground" data-testid="cached-at">{formatTime(storedAt)} ({formatAge(storedAt)})</dd>
+                </div>
+              </dl>
+            )
+          })() : null}
+
+          {snapshot && (
+            <Notice testId="snapshot-status" role="note" tone={snapshotOld ? 'caution' : 'neutral'} icon={snapshotOld ? TriangleAlert : Info} className="mt-4" title="Last saved prices">
+              These are the prices DealProof last captured for this product ({formatTime(snapshot.capturedAt) ?? 'at an unknown time'}), not today’s prices.
+              {snapshotOld ? ' They are more than 12 hours old.' : ''} They change only when you refresh and the product is confirmed.
+              {snapshot.truncated ? ' Only part of a very long listing set was kept.' : ''}
+            </Notice>
+          )}
 
           {stale && (
             <Notice testId="stale-banner" role="note" tone="caution" icon={TriangleAlert} className="mt-4" title="These prices are out of date">
@@ -217,8 +248,23 @@ export default function SavedProductPage() {
                 : `Stored data is less than 12 hours old, so this reloads it without using a search${quota ? ` (${quota.userRemainingToday} of ${quota.userDailyLimit} fresh searches left today)` : ''}.`}
             </p>
           </div>
-          {refreshNote && <p role="status" className="mt-3 text-sm text-foreground" data-testid="refresh-note">{refreshNote}</p>}
-          {refreshFailure && <ErrorPanel failure={refreshFailure} />}
+          {refreshNote && <p role="status" className="mt-3 text-sm text-foreground" data-testid="refresh-note"><span className="font-medium">Newly refreshed prices.</span> {refreshNote}</p>}
+          {refreshFailure && (
+            <>
+              <Notice testId="refresh-failed" role="note" tone="caution" icon={TriangleAlert} className="mt-3" title="Refresh unsuccessful">
+                {snapshot ? `Your last saved prices (captured ${formatTime(snapshot.capturedAt) ?? 'at an unknown time'}) were not changed.` : 'Nothing was changed.'}
+              </Notice>
+              <ErrorPanel failure={refreshFailure} />
+            </>
+          )}
+          {refreshProblem && (
+            <Notice testId="identity-unconfirmed" role="note" tone="caution" icon={TriangleAlert} className="mt-3" title={refreshProblem.kind === 'unconfirmed' ? 'Refresh could not confirm the product' : 'Refresh could not be saved'}>
+              {refreshProblem.detail}{' '}
+              {refreshProblem.kind === 'unconfirmed'
+                ? `DealProof did not switch to another product and did not change your saved prices${snapshot ? ` (captured ${formatTime(snapshot.capturedAt) ?? 'at an unknown time'})` : ''}.`
+                : ''}
+            </Notice>
+          )}
         </section>
       )}
 
@@ -226,6 +272,11 @@ export default function SavedProductPage() {
         <Notice testId="candidate-unresolved" role="note" tone="caution" icon={TriangleAlert} className="mt-6" title="The product you saved can’t be identified in the stored data">
           {UNRESOLVED_TEXT[unresolved.reason]} To avoid showing another product’s offers, nothing is compared. Use “{needsSearch ? 'Get fresh prices' : 'Refresh prices'}” to look again, or search for the product and save it afresh.
         </Notice>
+      )}
+      {snapshot && (
+        <p className="mt-6 text-sm text-muted-foreground" data-testid="saved-candidate">
+          Product group: <span className="text-foreground">“{snapshot.candidate.title}”</span>
+        </p>
       )}
       {resolution?.status === 'matched' && (
         <p className="mt-6 text-sm text-muted-foreground" data-testid="saved-candidate">
@@ -238,12 +289,12 @@ export default function SavedProductPage() {
           This product was saved before DealProof recorded which product group was chosen. It was matched to the group with the same title; check it is the one you meant.
         </Notice>
       )}
-      {hasOffers && result && offers.length > 0 && (
+      {hasOffers && (snapshot || result) && offers.length > 0 && (
         <div className="mt-6">
           <ComparisonView
-            key={`${saved.productKey}|${result.source.scrapedAt ?? ''}|${result.cachedAt}`}
+            key={`${saved.productKey}|${snapshot ? `${snapshot.source.scrapedAt ?? ''}|${snapshot.capturedAt}` : `${result?.source.scrapedAt ?? ''}|${result?.cachedAt}`}`}
             offers={offers}
-            scrapedAt={result.source.scrapedAt}
+            scrapedAt={snapshot ? snapshot.source.scrapedAt : (result?.source.scrapedAt ?? null)}
             initialTarget={saved.target}
             lockVariant
           />
