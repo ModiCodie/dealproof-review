@@ -1,0 +1,102 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "products": [
+      {
+        "id": "101692746",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Samsung - 990 PRO 2TB Internal SSD PCle Gen 4x4 NVMe",
+        "image_url": "https://encrypted-tbn2.gstatic.com/shopping?q=tbn%3AANd9GcS4jJF7SyXEsVksuHqL4or4ieiyGo5ASDr9Vj_CppMP7h9ONDYC5TkZ9_kHTUqB1HD7bK-90A",
+        "retained": {
+          "offer_count": 177,
+          "days_with_offers": 5,
+          "first_date_with_offers": "2026-02-21",
+          "last_date_with_offers": "2026-03-07"
+        },
+        "sellers": [
+          {
+            "id": "636987803",
+            "name": "AAAwave",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-03",
+            "days_with_offers": 4
+          },
+          {
+            "id": "1269611845",
+            "name": "Altex Electronics",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-03",
+            "days_with_offers": 4
+          },
+          {
+            "id": "134592398",
+            "name": "Best Buy",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-03",
+            "days_with_offers": 4
+          }
+        ],
+        "dates_with_offers": [
+          "2026-03-07",
+          "2026-03-03",
+          "2026-03-02"
+        ]
+      },
+      {
+        "id": "103061122",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "ASUS NUC 13 Rugged BRAVO CANYON N50 Barebone 64GB EMMC Storage Wifi Model BNUC13BRKP200B0UI SAMSUNG 990 PRO 2TB SSD, PCIe Gen4 M.2 2280, Seq. Read Spe",
+        "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn%3AANd9GcQUKLCAjDhOnuCgQCTefbMTnTpGP9CWfYXsJU2bTNFEM19EPxvLVjBXuVXwm10IWbpDxGS3Z4et",
+        "retained": {
+          "offer_count": 183,
+          "days_with_offers": 11,
+          "first_date_with_offers": "2026-02-21",
+          "last_date_with_offers": "2026-03-20"
+        },
+        "sellers": [
+          {
+            "id": "1742",
+            "name": "Newegg",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-20",
+            "days_with_offers": 11
+          },
+          {
+            "id": "987036576",
+            "name": "Newegg Business - Expresso Tech",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-20",
+            "days_with_offers": 11
+          },
+          {
+            "id": "1207555042",
+            "name": "Walmart",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-20",
+            "days_with_offers": 11
+          }
+        ],
+        "dates_with_offers": [
+          "2026-03-20",
+          "2026-03-19",
+          "2026-03-16"
+        ]
+      }
+    ],
+    "page": {
+      "limit": 5,
+      "returned": 2,
+      "next_cursor": null
+    },
+    "market_catalog": {
+      "market": "us",
+      "products": null,
+      "products_at_most": 180970,
+      "catalog_products": 10109016,
+      "measured_on": "2026-09-17"
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "product": {
+      "id": "124474134",
+      "id_type": "pricesapi",
+      "market": "us",
+      "currency": "USD"
+    },
+    "window": {
+      "from": "2026-11-12",
+      "to": "2026-11-18",
+      "as_of": "2026-11-19T21:57:52.391Z",
+      "days_requested": 7,
+      "days_with_offers": 2,
+      "times_with_offers": 2,
+      "offer_count": 26,
+      "first_recorded_at": "2026-11-14T01:54:11.846Z",
+      "last_recorded_at": "2026-11-16T02:02:18.925Z"
+    },
+    "offers": [
+      {
+        "recorded_at": "2026-11-14T01:54:11.846Z",
+        "seller_id": "1059",
+        "seller": "Techinn.com",
+        "seller_domain": "tradeinn.com",
+        "price": 296.99,
+        "currency": "USD",
+        "seller_product_url": "https://www.tradeinn.com/dressinn/en/sony-wh-1000xm5-wireless-headphones/139868602/p?id_producte=19746554&country=us",
+        "product_title": "Sony Wh-1000xm5 Wireless Headphones Silver",
+        "stock_status": "In stock",
+        "delivery_info": "Delivery $21.49"
+      },
+      {
+        "recorded_at": "2026-11-14T01:54:11.846Z",
+        "seller_id": "118560900",
+        "seller": "eBay - universalbicyclesandaccessories",
+        "seller_domain": "ebay.com",
+        "price": 181.15,
+        "currency": "USD",
+        "seller_product_url": "https://www.ebay.com/itm/800798558499?chn=ps&mkevt=1&mkcid=28&google_free_listing_action=view_item",
+        "product_title": "Sony Wh-1000xm5 Wireless Noise Canceling Headphones - (silver)",
+        "stock_status": "In stock",
+        "delivery_info": "Free delivery by Nov 25"
+      },
+      {
+        "recorded_at": "2026-11-14T01:54:11.846Z",
+        "seller_id": "287141989",
+        "seller": "Poshmark",
+        "seller_domain": "poshmark.com",
+        "price": 260,
+        "currency": "USD",
+        "seller_product_url": "https://poshmark.com/listing/Sony-WH1000XM5-Wireless-NoiseCanceling-OvertheEar-Headphones-Silver-696164af4f80f9bd56029a9d",
+        "product_title": "Sony WH-1000XM5 Wireless Noise-Canceling Over-the-Ear Headphones Silver",
+        "stock_status": "In stock",
+        "delivery_info": null
+      }
+    ],
+    "page": {
+      "limit": 1000,
+      "returned": 26,
+      "next_cursor": null
+    }
+  }
+}

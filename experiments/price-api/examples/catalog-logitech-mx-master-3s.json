@@ -1,0 +1,120 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "products": [
+      {
+        "id": "132394074",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Logitech MX Keys Mini Wireless Keyboard with MX Master 3S Mouse",
+        "image_url": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn%3AANd9GcRoY3p5fBi7u40ukjX070jIx3JLh5pkcl_BRuMJzifIfA8Pm4z8mBzdIcFhAzDOtKSZ1sbgqmzNZJ5wJhW8eKltXX-5iGpVG-NCtNf3gHuD8A43-L2Ig4CNUg",
+        "retained": {
+          "offer_count": 2,
+          "days_with_offers": 1,
+          "first_date_with_offers": "2026-09-11",
+          "last_date_with_offers": "2026-09-11"
+        },
+        "sellers": [
+          {
+            "id": "990513345",
+            "name": "Adorama",
+            "first_date_with_offers": "2026-09-11",
+            "last_date_with_offers": "2026-09-11",
+            "days_with_offers": 1
+          },
+          {
+            "id": "1207555042",
+            "name": "Walmart",
+            "first_date_with_offers": "2026-09-11",
+            "last_date_with_offers": "2026-09-11",
+            "days_with_offers": 1
+          }
+        ],
+        "dates_with_offers": [
+          "2026-09-11"
+        ]
+      },
+      {
+        "id": "100913330",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Logitech MX Keys Mini for Mac Wireless Keyboard (Black) with Mouse Logitech MX Master 3S Bundle",
+        "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn%3AANd9GcTOlRZwIs8hwuqKnPMexLKQXFIqa7n9GXCubEfnveTFjFnyNXz1pL8MzN82UesU3iFdV7vCApc",
+        "retained": {
+          "offer_count": 12,
+          "days_with_offers": 12,
+          "first_date_with_offers": "2026-02-20",
+          "last_date_with_offers": "2026-03-21"
+        },
+        "sellers": [
+          {
+            "id": "1352603058",
+            "name": "Focus Camera",
+            "first_date_with_offers": "2026-02-20",
+            "last_date_with_offers": "2026-03-21",
+            "days_with_offers": 12
+          }
+        ],
+        "dates_with_offers": [
+          "2026-03-21",
+          "2026-03-19",
+          "2026-03-16"
+        ]
+      },
+      {
+        "id": "102554380",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Logitech MX Master 3S Wireless Mac Mouse",
+        "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn%3AANd9GcQ1erlTZYfD9EkD1vFXtNNyqfYrtNi-LkqfdHQXHMO4a94R7XbX5ZVCdJpLaSvNuplRlViu_2M",
+        "retained": {
+          "offer_count": 660,
+          "days_with_offers": 12,
+          "first_date_with_offers": "2026-02-21",
+          "last_date_with_offers": "2026-03-24"
+        },
+        "sellers": [
+          {
+            "id": "134592398",
+            "name": "Best Buy",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-24",
+            "days_with_offers": 12
+          },
+          {
+            "id": "1779420854",
+            "name": "BrandsMart USA",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-24",
+            "days_with_offers": 12
+          },
+          {
+            "id": "549742761",
+            "name": "IT Vision Networks",
+            "first_date_with_offers": "2026-02-21",
+            "last_date_with_offers": "2026-03-24",
+            "days_with_offers": 12
+          }
+        ],
+        "dates_with_offers": [
+          "2026-03-24",
+          "2026-03-20",
+          "2026-03-19"
+        ]
+      }
+    ],
+    "page": {
+      "limit": 5,
+      "returned": 5,
+      "next_cursor": "eyJ2IjoxLCJvIjo1LCJoIjoiYWEzYWZiNDNkMGNkNjYwY2Q0ZWQzZjI0ZDgwMWM4NWEzNWNmNTU4MzBlODdlNzg0YWFiMjc1MjQxYWQ5MDJiOSIsInQiOjE3OTUxMjUzNDQ3Nzh9"
+    },
+    "market_catalog": {
+      "market": "us",
+      "products": null,
+      "products_at_most": 180970,
+      "catalog_products": 10109016,
+      "measured_on": "2026-09-17"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "dealproof-price-api-experiment",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Standalone PricesAPI feasibility experiment (no dependencies; Node 18+)",
+  "scripts": { "check": "node run.mjs check" }
+}

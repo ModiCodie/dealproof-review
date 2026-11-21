@@ -1,0 +1,91 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "products": [
+      {
+        "id": "148461241",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Sony WH-1000XM5",
+        "image_url": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn%3AANd9GcR_jb5tZXsfXN9sGx3ouoFnZOyNvTNF2D6LWGx-w7ObAmcefteVSEsMIw210-nAUbNGGaWSrmeu0QUbE6P-bJ0oBAzHLUiomzI3cu0gkps",
+        "retained": {
+          "offer_count": 0,
+          "days_with_offers": 0,
+          "first_date_with_offers": null,
+          "last_date_with_offers": null
+        },
+        "sellers": [],
+        "dates_with_offers": []
+      },
+      {
+        "id": "134980349",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones Black",
+        "image_url": "https://encrypted-tbn3.gstatic.com/shopping?q=tbn%3AANd9GcSMXYUwNJ1V0-TXEobJLsQf2WtG6MyxcOJj21MkP9GfzLNbHErkawwDvD-BLTtjMosYWTFneu_WAppmibORfRYw8DkubQybggAvrDZlOPG9p4ssN1oUFJB1pw",
+        "retained": {
+          "offer_count": 220,
+          "days_with_offers": 8,
+          "first_date_with_offers": "2026-09-25",
+          "last_date_with_offers": "2026-11-16"
+        },
+        "sellers": [
+          {
+            "id": "118560900",
+            "name": "eBay - universalbicyclesandaccessories",
+            "first_date_with_offers": "2026-09-25",
+            "last_date_with_offers": "2026-11-16",
+            "days_with_offers": 8
+          },
+          {
+            "id": "1742",
+            "name": "Newegg",
+            "first_date_with_offers": "2026-09-25",
+            "last_date_with_offers": "2026-11-16",
+            "days_with_offers": 7
+          },
+          {
+            "id": "495783727",
+            "name": "Sears - ErgodE",
+            "first_date_with_offers": "2026-10-22",
+            "last_date_with_offers": "2026-11-16",
+            "days_with_offers": 6
+          }
+        ],
+        "dates_with_offers": [
+          "2026-11-16",
+          "2026-11-14",
+          "2026-11-12"
+        ]
+      },
+      {
+        "id": "150030937",
+        "id_type": "pricesapi",
+        "market": "us",
+        "title": "Sony Wireless Headphones Wh-1000xm5",
+        "image_url": null,
+        "retained": {
+          "offer_count": 0,
+          "days_with_offers": 0,
+          "first_date_with_offers": null,
+          "last_date_with_offers": null
+        },
+        "sellers": [],
+        "dates_with_offers": []
+      }
+    ],
+    "page": {
+      "limit": 5,
+      "returned": 5,
+      "next_cursor": "eyJ2IjoxLCJvIjo1LCJoIjoiY2IyZjBjZmQ5MmQ4YWIxMTMxNmUyYjFlYjJlYjRlZDMwZTlmOGY5ODk0NjMyNzBjNWQ3OTFiY2E2MTBhYmQ5MSIsInQiOjE3OTUxMjUzNDIwMzh9"
+    },
+    "market_catalog": {
+      "market": "us",
+      "products": null,
+      "products_at_most": 180970,
+      "catalog_products": 10109016,
+      "measured_on": "2026-09-17"
+    }
+  }
+}

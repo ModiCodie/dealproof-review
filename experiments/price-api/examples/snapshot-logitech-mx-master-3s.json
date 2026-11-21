@@ -1,0 +1,83 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "product": {
+      "id": "102554285",
+      "id_type": "pricesapi",
+      "market": "us",
+      "title": "Logitech MX Master 3S Performance Wireless Mouse",
+      "brand": "Logitech",
+      "image_url": "https://encrypted-tbn0.gstatic.com/shopping?q=tbn%3AANd9GcTdOCbb_tHv54_-WDaARDmjkFO3btDban_G2z5Ri8TYsyWNXamdDYpGe8DovUNrreasMKGpOg",
+      "category_id": null,
+      "catalog_id": "17410956215777577209",
+      "status": "active",
+      "offline_at": null,
+      "specs": null,
+      "cluster_id": "3161195826480997551",
+      "variant_attributes": [
+        {
+          "type": "Color",
+          "label": "Black"
+        }
+      ]
+    },
+    "observation": {
+      "state": "observed",
+      "reason": null,
+      "observed_at": "2026-03-20T21:29:13.805Z",
+      "age_seconds": 21083313,
+      "stale_after_seconds": 93600,
+      "stale": true
+    },
+    "offers": [
+      {
+        "seller_id": "118560900",
+        "seller": "eBay - universalbicyclesandaccessories",
+        "seller_url": null,
+        "seller_domain": "ebay.com",
+        "price": 74,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Logitech - Mx Master 3s Bluetooth Edition Performance Wireless Optical",
+        "delivery_info": "Free delivery by Mar 27",
+        "url": "https://www.ebay.com/itm/397671668998",
+        "observed_at": "2026-03-20T21:29:13.805Z"
+      },
+      {
+        "seller_id": "118560900",
+        "seller": "eBay - universalbicyclesandaccessories",
+        "seller_url": null,
+        "seller_domain": "ebay.com",
+        "price": 79.97,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Logitech Mx Master 3s Bluetooth Wireless Mouse 8k Dpi Quiet Clicks",
+        "delivery_info": "Free delivery by Mar 27",
+        "url": "https://www.ebay.com/itm/157220453672",
+        "observed_at": "2026-03-20T21:29:13.805Z"
+      },
+      {
+        "seller_id": "134592398",
+        "seller": "Best Buy",
+        "seller_url": null,
+        "seller_domain": "bestbuy.com",
+        "price": 88.99,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Logitech - MX Master 3S Bluetooth Edition Performance Wireless Optical Mouse with Ultra-fast Scrolling and Quiet Clicks - Wireless - Black",
+        "delivery_info": "Free delivery by Sun",
+        "url": "https://www.bestbuy.com/product/logitech-mx-master-3s-bluetooth-edition-performance-wireless-optical-mouse-with-ultra-fast-scrolling-and-quiet-clicks-wireless-black/J7H7ZYG559/sku/6633199",
+        "observed_at": "2026-03-20T21:29:13.805Z"
+      }
+    ],
+    "offers_page": {
+      "limit": 60,
+      "returned": 26,
+      "truncated": false
+    }
+  }
+}

@@ -1,0 +1,11 @@
+App: dealproof (app_01M7TZWJD321CGWEMJGK49RB8C), production. URL: https://dealproof.app.space. CLI/SDK deepspace 0.44.2 (latest on npm).
+
+What happened: the first `deepspace deploy` (about 22:50-23:00 UTC, 2026-11-19) built successfully, uploaded 17 assets and claimed the GitHub source modicodie/dealproof, then failed with `release_reconciliation_pending`: "Worker activated, but authoritative user-secret deletion is incomplete after 3 attempts" (the platform's script-secrets listing returned a Cloudflare 404). Every unchanged re-run since (five, over about 25 minutes) failed with `release_in_progress` ("Another deploy is already activating for this app"). No deploy attempts since 23:27 UTC.
+
+The mismatch: the Worker is serving. GET / returns 200 and GET /.well-known/deepspace/release.json returns release 8c07d69a-b063-4867-ad79-38ba039e40f5. But the control plane says nothing exists: `deepspace status` -> Live "never deployed"; `deepspace releases` -> 0 releases; `deepspace activity` -> 0 events; `deepspace logs` -> app_not_deployed. Results were identical at 2026-11-19 23:27 UTC, 2026-11-20 00:06 UTC and 2026-11-20 02:05 UTC.
+
+Checked locally: app id in wrangler.toml matches `deepspace status`; clean worktree on main; production environment; one secret (PRICESAPI_KEY) was set before the first deploy.
+
+Not done: app undeploy, app init --new-id, secret deletion, identity or git-source changes, further deploy loops.
+
+Request: please reconcile or release the stuck activation of release 8c07d69a-b063-4867-ad79-38ba039e40f5 so it is recorded in the release ledger (or tell me how to clear it). Please also confirm whether re-running `deepspace deploy` is now safe, and whether the missing script-secrets listing (404) is a known platform issue.

@@ -1,0 +1,196 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "success": true,
+    "data": {
+      "query": "Logitech MX Master 3S",
+      "market": "us",
+      "products": [
+        {
+          "position": 1,
+          "pid": 123798262,
+          "cluster_id": "354089537811277366",
+          "catalog_id": "5711550304175942543",
+          "title": "Logitech MX Master 3S Mouse Pale Gray",
+          "image": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn:ANd9GcSS-kWVepgfBj-VPFvvWJVvrBSD5TEc3wSjMaZ4SBitsMrs-21y9tFxH2VdYkf0ewjIPi6m1XTRAfAEXQX02ow-l0d9usQSteBMUgfo5Q-L",
+          "headline_price": 1032.78,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Compu Devices",
+          "multi_store": true,
+          "rating": 3.1,
+          "reviews": 1600,
+          "delivery": "Free delivery",
+          "tags": [],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Adorama",
+              "seller_url": "https://www.adorama.com",
+              "price": 129.99,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S Performance Wireless Mouse for Mac Pale Gray",
+              "stock_status": "Backordered",
+              "delivery_info": "Free delivery between Mon - Wed",
+              "url": "https://www.adorama.com/logitech-mx-master-3s-performance-wireless-mouse-mac-bluetooth/p/lo91006570"
+            },
+            {
+              "seller": "Microless.com",
+              "seller_url": "https://global.microless.com",
+              "price": 115.07,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S for Mac Wireless Mouse, 2.4GHz RF & BT LE, 8000dpi Darkfield Optical Sensor, Quiet Click Butons, MagSpeed Electromagnetic Scroll",
+              "stock_status": "In stock",
+              "delivery_info": "Delivery between Nov 24 – Dec 1 $32.50",
+              "url": "https://global.microless.com/product/logitech-mx-master-3s-for-mac-wireless-mouse-2-4ghz-rf-bt-le-8000dpi-darkfield-optical-sensor-quiet-click-butons-magspeed-electromagnetic-scrolling-up-to-70-days-battery-pale-gray-910-006570/?currency=usd"
+            },
+            {
+              "seller": "BarcodesInc",
+              "seller_url": "https://www.barcodesinc.com",
+              "price": 119.73,
+              "currency": "USD",
+              "product_title": "Logitech 910-006570 Computer Mice",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery between Thu - Tue",
+              "url": "https://www.barcodesinc.com/logitech/part-910-006570.htm"
+            }
+          ],
+          "offerCount": 22,
+          "product_ref": {
+            "id": "123798262",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        },
+        {
+          "position": 2,
+          "pid": 102554285,
+          "cluster_id": "3161195826480997551",
+          "catalog_id": "17410956215777577209",
+          "title": "Logitech MX Master 3S Wireless Mouse - 8K Optical Sensor in Black",
+          "image": "data:image/webp;base64,UklGRpI...[data-uri trimmed]",
+          "headline_price": 79.99,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Logitech",
+          "multi_store": true,
+          "rating": 4.2,
+          "reviews": 4500,
+          "delivery": "Free delivery",
+          "tags": [
+            "20% OFF"
+          ],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Best Buy",
+              "seller_url": "https://www.bestbuy.com",
+              "price": 79.99,
+              "currency": "USD",
+              "product_title": "Logitech - MX Master 3S Bluetooth Edition Performance Wireless Optical Mouse with Ultra-fast Scrolling and Quiet Clicks - Wireless - Black",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Mon",
+              "url": "https://www.bestbuy.com/product/logitech-mx-master-3s-bluetooth-edition-performance-wireless-optical-mouse-with-ultra-fast-scrolling-and-quiet-clicks-wireless-black/J7H7ZYG559/sku/6633199"
+            },
+            {
+              "seller": "Walmart",
+              "seller_url": "https://www.walmart.com",
+              "price": 79.99,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S Wireless Optical Mouse, Bluetooth Edition, Black (910-007500)",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery between Fri - Mon",
+              "url": "https://www.walmart.com/ip/Logitech-MX-Master-3S-Wireless-Performance-Mouse-Ergo-8K-DPI-Quiet-Clicks-USB-C-Black/731473988?wmlspartner=wlpa&selectedSellerId=0&veh=seo_fpl&cn=google"
+            },
+            {
+              "seller": "Logitech",
+              "seller_url": "https://www.logitech.com",
+              "price": 79.99,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S Wireless Mouse - 8K Optical Sensor in Black",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery between Nov 27 – Dec 1",
+              "url": "https://www.logitech.com/en-us/shop/p/mx-master-3s.910-007500"
+            }
+          ],
+          "offerCount": 60,
+          "product_ref": {
+            "id": "102554285",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        },
+        {
+          "position": 3,
+          "pid": 149586381,
+          "cluster_id": "3161195826480997551",
+          "catalog_id": "2430373025615912667",
+          "title": "Logitech MX Master 3S Wireless Mouse - 8K Optical Sensor in Black",
+          "image": "data:image/webp;base64,UklGRpQ...[data-uri trimmed]",
+          "headline_price": 79.99,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Logitech",
+          "multi_store": true,
+          "rating": 4.2,
+          "reviews": 4500,
+          "delivery": "Free delivery",
+          "tags": [
+            "20% OFF"
+          ],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Walmart - Budding Blossoms",
+              "seller_url": "https://www.walmart.com",
+              "price": 110.13,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S Wireless Optical Mouse, Bluetooth Edition, Black (910-007500)",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Tue",
+              "url": "https://www.walmart.com/ip/Logitech-MX-Master-3S-Wireless-Performance-Mouse-Ergo-8K-DPI-Quiet-Clicks-USB-C-Black/731473988?wmlspartner=wlpa&selectedSellerId=101482334&veh=seo_fpl&cn=google"
+            },
+            {
+              "seller": "Best Buy",
+              "seller_url": "https://www.bestbuy.com",
+              "price": 79.99,
+              "currency": "USD",
+              "product_title": "Logitech - MX Master 3S Bluetooth Edition Performance Wireless Optical Mouse with Ultra-fast Scrolling and Quiet Clicks - Wireless - Black",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Mon",
+              "url": "https://www.bestbuy.com/product/logitech-mx-master-3s-bluetooth-edition-performance-wireless-optical-mouse-with-ultra-fast-scrolling-and-quiet-clicks-wireless-black/J7H7ZYG559/sku/6633199"
+            },
+            {
+              "seller": "Logitech",
+              "seller_url": "https://www.logitech.com",
+              "price": 79.99,
+              "currency": "USD",
+              "product_title": "Logitech MX Master 3S Wireless Mouse - 8K Optical Sensor in Black",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery between Nov 27 – Dec 1",
+              "url": "https://www.logitech.com/en-us/shop/p/mx-master-3s.910-007500"
+            }
+          ],
+          "offerCount": 60,
+          "product_ref": {
+            "id": "149586381",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        }
+      ]
+    },
+    "meta": {
+      "latency_ms": 41414,
+      "raw_count": 38,
+      "gid_bearing_count": 3,
+      "discover_ms": 1283,
+      "products_ms": 40099,
+      "blocked": false,
+      "cache_source": "miss",
+      "scraped_at": "2026-11-19T21:57:03.575Z",
+      "schedule_state": "cap_reached"
+    }
+  }
+}

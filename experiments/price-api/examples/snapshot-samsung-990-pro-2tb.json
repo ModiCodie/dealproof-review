@@ -1,0 +1,34 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "product": {
+      "id": "129939854",
+      "id_type": "pricesapi",
+      "market": "us",
+      "title": "Samsung 990 PRO 2TB NVMe w/ Heatsink M.2 SSD - MZ-V9P2T0CW",
+      "brand": null,
+      "image_url": "https://encrypted-tbn1.gstatic.com/shopping?q=tbn%3AANd9GcRy_IZ9MdKXAMdg061WjyDEz1u4z0y06aGMtAxDyqATpg4IO80_8hRjw9ypgSJPflZCixy5bVK5gYj2hVRtp-nsRcnSRcPv36JATzCZhuYJ",
+      "category_id": null,
+      "catalog_id": "2579423827123732055",
+      "status": "active",
+      "offline_at": null,
+      "specs": null,
+      "cluster_id": "1771359071691708116"
+    },
+    "observation": {
+      "state": "unobserved",
+      "reason": "not_observed",
+      "observed_at": null,
+      "age_seconds": null,
+      "stale_after_seconds": 93600,
+      "stale": null
+    },
+    "offers": [],
+    "offers_page": {
+      "limit": 60,
+      "returned": 0,
+      "truncated": false
+    }
+  }
+}

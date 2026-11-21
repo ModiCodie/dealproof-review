@@ -1,0 +1,29 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "product": {
+      "id": "102554285",
+      "id_type": "pricesapi",
+      "market": "us",
+      "currency": "USD"
+    },
+    "window": {
+      "from": "2026-11-12",
+      "to": "2026-11-18",
+      "as_of": "2026-11-19T21:57:50.554Z",
+      "days_requested": 7,
+      "days_with_offers": 0,
+      "times_with_offers": 0,
+      "offer_count": 0,
+      "first_recorded_at": null,
+      "last_recorded_at": null
+    },
+    "offers": [],
+    "page": {
+      "limit": 1000,
+      "returned": 0,
+      "next_cursor": null
+    }
+  }
+}

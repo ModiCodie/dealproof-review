@@ -1,0 +1,192 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "success": true,
+    "data": {
+      "query": "Sony WH-1000XM5",
+      "market": "us",
+      "products": [
+        {
+          "position": 1,
+          "pid": 100569557,
+          "cluster_id": "15371672047511242590",
+          "catalog_id": "616451758542646188",
+          "title": "An interactive autorotating 360 image showing the item from different angles. Use Alt or Option + right or left arrow key to rotate Sony WH-1000XM5 Wireless Noise Canceling Headphones.  Low price",
+          "image": "data:image/webp;base64,UklGRr4...[data-uri trimmed]",
+          "headline_price": 147.26,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Usually $198",
+          "multi_store": false,
+          "rating": 4.6,
+          "reviews": 15000,
+          "delivery": "Free delivery",
+          "tags": [],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Walmart - Secondipity",
+              "seller_url": "https://www.walmart.com",
+              "price": 147.26,
+              "currency": "USD",
+              "product_title": "Sony Wh-1000xm5 Bluetooth Wireless Noise Canceling Headphones - Blue",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery",
+              "url": "https://www.walmart.com/ip/Sony-WH-1000XM5-Noise-Canceling-Wireless-Over-Ear-Headphones-Midnight-Blue/3323306909?wmlspartner=wlpa&selectedSellerId=1418&veh=seo_fpl&cn=google"
+            },
+            {
+              "seller": "Best Buy",
+              "seller_url": "https://www.bestbuy.com",
+              "price": 169.99,
+              "currency": "USD",
+              "product_title": "Sony - WH-1000XM5 Wireless Noise Cancelling Over-the-Ear Headphones - Blue",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Mon",
+              "url": "https://www.bestbuy.com/product/sony-wh-1000xm5-wireless-noise-cancelling-over-the-ear-headphones-blue/J7XSRH528S/sku/6538379"
+            },
+            {
+              "seller": "DoorDash - Best Buy US",
+              "seller_url": "https://www.doordash.com",
+              "price": 229.99,
+              "currency": "USD",
+              "product_title": "Sony - WH-1000XM5 Wireless Noise Cancelling Over-the-Ear Headphones - Blue | Best Buy",
+              "stock_status": "In stock",
+              "delivery_info": "Delivery within 50min $5.99",
+              "url": "https://www.doordash.com/products/-/ugp_dc7b438b-250c-462f-ae2a-61a475b3fdf2?business_id=11630312&ms_id=6538379&region_id=26060106"
+            }
+          ],
+          "offerCount": 18,
+          "product_ref": {
+            "id": "100569557",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        },
+        {
+          "position": 2,
+          "pid": 137276416,
+          "cluster_id": "11726664398501807381",
+          "catalog_id": "4188647699921735833",
+          "title": "Sony WH-1000XM5 Wireless Noise Canceling Over-Ear Headphones",
+          "image": "data:image/webp;base64,UklGRlo...[data-uri trimmed]",
+          "headline_price": 399.99,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Best Buy",
+          "multi_store": true,
+          "rating": 4.6,
+          "reviews": 15000,
+          "delivery": "Free delivery",
+          "tags": [],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Best Buy",
+              "seller_url": "https://www.bestbuy.com",
+              "price": 399.99,
+              "currency": "USD",
+              "product_title": "Sony - WH-1000XM5 Wireless Noise Canceling Over-Ear Headphones Bundle - Silver",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery",
+              "url": "https://www.bestbuy.com/product/sony-wh-1000xm5-wireless-noise-canceling-over-ear-headphones-bundle-silver/JJG2F3PP3P/sku/10210401?ref=212&loc=marketplace"
+            },
+            {
+              "seller": "eBay - focuscamera",
+              "seller_url": "https://www.ebay.com",
+              "price": 399.99,
+              "currency": "USD",
+              "product_title": "Sony Wh-1000xm5 Wireless Noise Canceling Over-ear Headphones Bundle",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Nov 30",
+              "url": "https://www.ebay.com/itm/377522675331?chn=ps&mkevt=1&mkcid=28&google_free_listing_action=view_item"
+            },
+            {
+              "seller": "selfridges.com",
+              "seller_url": "https://www.selfridges.com",
+              "price": 340,
+              "currency": "USD",
+              "product_title": "SONY - WH-1000XM5 noise-cancelling headphones | Selfridges.com",
+              "stock_status": "In stock",
+              "delivery_info": null,
+              "url": "https://www.selfridges.com/US/en/product/sony-wh-1000xm5-noise-cancelling-headphones_R03970150/"
+            }
+          ],
+          "offerCount": 11,
+          "product_ref": {
+            "id": "137276416",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        },
+        {
+          "position": 3,
+          "pid": 124474134,
+          "cluster_id": "13110626285338664899",
+          "catalog_id": "4815469244780238856",
+          "title": "Sony WH-1000XM5 Wireless Headphones",
+          "image": "data:image/webp;base64,UklGRrA...[data-uri trimmed]",
+          "headline_price": 159.99,
+          "headline_currency": "USD",
+          "condition_label": null,
+          "source": "Walmart - Secondipity",
+          "multi_store": true,
+          "rating": 4.5,
+          "reviews": 6400,
+          "delivery": "Free delivery",
+          "tags": [],
+          "nearby_distance_km": null,
+          "offers": [
+            {
+              "seller": "Walmart - Secondipity",
+              "seller_url": "https://www.walmart.com",
+              "price": 159.99,
+              "currency": "USD",
+              "product_title": "Sony Wh1000xm5/s Wireless Bluetooth Over-Ear Noise Canceling Headphones, White",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery",
+              "url": "https://www.walmart.com/ip/Sony-WH1000XM5-S-Wireless-Bluetooth-Over-Ear-Noise-Canceling-Headphones-White/20374253356?wmlspartner=wlpa&selectedSellerId=1418&veh=seo_fpl&cn=google"
+            },
+            {
+              "seller": "eBay",
+              "seller_url": "https://www.ebay.com",
+              "price": 181.15,
+              "currency": "USD",
+              "product_title": "Sony Wh-1000xm5 Wireless Noise Canceling Headphones - (silver)",
+              "stock_status": "In stock",
+              "delivery_info": "Free delivery by Dec 2",
+              "url": "https://www.ebay.com/itm/800798558499?chn=ps&mkevt=1&mkcid=28&google_free_listing_action=view_item"
+            },
+            {
+              "seller": "attenza.net",
+              "seller_url": "https://co.attenza.net",
+              "price": 270,
+              "currency": "USD",
+              "product_title": "Sony Bluetooth Stereo Headphones with Noise Cancellation 1000XM5 - Silver",
+              "stock_status": "In stock",
+              "delivery_info": null,
+              "url": "https://co.attenza.net/en/products/sony-audifonos-estereo-bluetooth-con-cancelacion-de-ruido-1000xm5?variant=42758841663563"
+            }
+          ],
+          "offerCount": 40,
+          "product_ref": {
+            "id": "124474134",
+            "id_type": "pricesapi",
+            "market": "us"
+          }
+        }
+      ]
+    },
+    "meta": {
+      "latency_ms": 20147,
+      "raw_count": 40,
+      "gid_bearing_count": 3,
+      "discover_ms": 1465,
+      "products_ms": 18655,
+      "blocked": false,
+      "cache_source": "miss",
+      "scraped_at": "2026-11-19T21:56:10.161Z",
+      "schedule_state": "not_scheduled"
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "status": 200,
+  "note": "arrays truncated to first 3 items",
+  "body": {
+    "product": {
+      "id": "124474134",
+      "id_type": "pricesapi",
+      "market": "us",
+      "title": "Sony WH-1000XM5 Wireless Headphones Silver",
+      "brand": "Sony",
+      "image_url": null,
+      "category_id": null,
+      "catalog_id": "4815469244780238856",
+      "status": "active",
+      "offline_at": null,
+      "specs": [
+        {
+          "name": "Brand",
+          "value": "Sony"
+        },
+        {
+          "name": "Noise Canceling",
+          "value": "Yes"
+        },
+        {
+          "name": "With Microphone",
+          "value": "Yes"
+        }
+      ],
+      "cluster_id": "13110626285338664899",
+      "variant_attributes": [
+        {
+          "type": "Color",
+          "label": "Silver"
+        }
+      ]
+    },
+    "observation": {
+      "state": "observed",
+      "reason": null,
+      "observed_at": "2026-11-16T02:02:18.925Z",
+      "age_seconds": 330927,
+      "stale_after_seconds": 93600,
+      "stale": true
+    },
+    "offers": [
+      {
+        "seller_id": "1207555042",
+        "seller": "Walmart",
+        "seller_url": null,
+        "seller_domain": "walmart.com",
+        "price": 159.99,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Sony Wh1000xm5/s Wireless Bluetooth Over-Ear Noise Canceling Headphones, White",
+        "delivery_info": "Free delivery",
+        "url": "https://www.walmart.com/ip/Sony-WH1000XM5-S-Wireless-Bluetooth-Over-Ear-Noise-Canceling-Headphones-White/20374253356?wmlspartner=wlpa&selectedSellerId=1418&veh=seo_fpl&cn=google",
+        "observed_at": "2026-11-16T02:02:18.925Z"
+      },
+      {
+        "seller_id": "579387071",
+        "seller": "swappa.com",
+        "seller_url": null,
+        "seller_domain": "swappa.com",
+        "price": 160,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Sony WH-1000XM5 - Silver",
+        "delivery_info": "Free delivery",
+        "url": "https://swappa.com/listing/view/LALM09541",
+        "observed_at": "2026-11-16T02:02:18.925Z"
+      },
+      {
+        "seller_id": "118560900",
+        "seller": "eBay - universalbicyclesandaccessories",
+        "seller_url": null,
+        "seller_domain": "ebay.com",
+        "price": 181.15,
+        "currency": "USD",
+        "availability": "in_stock",
+        "availability_raw": "In stock",
+        "title": "Sony Wh-1000xm5 Wireless Noise Canceling Headphones - (silver)",
+        "delivery_info": "Free delivery by Nov 25",
+        "url": "https://www.ebay.com/itm/800798558499?chn=ps&mkevt=1&mkcid=28&google_free_listing_action=view_item",
+        "observed_at": "2026-11-16T02:02:18.925Z"
+      }
+    ],
+    "offers_page": {
+      "limit": 60,
+      "returned": 13,
+      "truncated": false
+    }
+  }
+}
