@@ -39,7 +39,9 @@ export interface CandidateView {
 
 /** Candidates that carry at least one offer, each described against what the user searched. */
 export function viewCandidates(query: string, candidates: ProductCandidate[]): CandidateView[] {
-  const probe: GenericTarget = { family: 'generic', variant: {}, spec: buildGenericSpec(query, null) }
+  const spec = buildGenericSpec(query, null)
+  // anything the search itself states (e.g. "2TB") is part of what a group must match
+  const probe: GenericTarget = { family: 'generic', variant: { ...spec.pins }, spec }
   const vague = identityLevel(probe.spec) === 'insufficient'
   const out: CandidateView[] = []
   candidates.forEach((c, index) => {

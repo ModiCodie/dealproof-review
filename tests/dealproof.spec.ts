@@ -56,6 +56,9 @@ test.describe('DealProof comparison UI', () => {
     await u.page.goto('/search')
     await expect(u.page.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
     await expect(u.page.getByRole('heading', { level: 1 })).toContainText('Compare the right listings')
+    await expect(u.page.getByTestId('product-search-input')).toBeVisible()
+    await expect(u.page.getByTestId('sample-picker')).toHaveCount(0) // no featured product is pre-selected
+    await u.page.getByTestId('product-sony').click()
     await expect(u.page.getByTestId('sample-picker')).toContainText('Explore demo')
     await expect(u.page.getByTestId('sample-picker')).toContainText('Check live prices')
     await u.page.screenshot({ path: `${SHOTS}/01-search-idle-desktop.png` })
@@ -288,21 +291,25 @@ test.describe('DealProof comparison UI', () => {
     expect(net.bad).toEqual([])
   })
 
-  test('6b. the picker offers exactly the three supported products and no free-text box', async ({ users }) => {
+  test('6b. general search box plus featured products (three examples, none pre-selected)', async ({ users }) => {
     const [u] = await users(1)
     const p = u.page
     const net = guardNoPaidCalls(p)
     await p.goto('/search')
     await expect(p.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
-    await expect(p.getByRole('radio')).toHaveCount(3)
-    await expect(p.getByTestId('product-sony')).toHaveAttribute('aria-checked', 'true') // one product is always selected
-    await expect(p.locator('input[type="text"], input[type="search"], textarea')).toHaveCount(0)
+    await expect(p.getByTestId('product-search-input')).toBeVisible()
+    await expect(p.getByTestId('featured').getByRole('radio')).toHaveCount(3) // featured examples keep their cards
+    for (const k of ['sony', 'logitech', 'samsung']) await expect(p.getByTestId(`product-${k}`)).toHaveAttribute('aria-checked', 'false')
+    await expect(p.getByText('Only 3')).toHaveCount(0)
     await p.getByTestId('product-logitech').click()
     await expect(p.getByTestId('product-logitech')).toHaveAttribute('aria-checked', 'true')
     await expect(p.getByTestId('product-sony')).toHaveAttribute('aria-checked', 'false')
     // the live check is explicit: nothing ran just from choosing, and the demo does not search either
     await p.getByTestId('sample-logitech').click()
     await expect(p.getByTestId('save-unavailable')).toContainText('Saving needs a live comparison')
+    // typing is never a search
+    await p.getByTestId('product-search-input').fill('Dyson V15 Detect')
+    await p.waitForTimeout(500)
     expect(net.searchCalls).toEqual([])
     expect(net.bad).toEqual([])
   })
@@ -316,6 +323,7 @@ test.describe('DealProof comparison UI', () => {
     await expect(p.getByTestId('product-picker')).toBeVisible({ timeout: 20_000 })
     expect(await noHorizontalScroll(p)).toBe(true)
     await p.screenshot({ path: `${SHOTS}/09-search-idle-mobile.png` })
+    await p.getByTestId('product-sony').click()
     await p.getByTestId('sample-sony').click()
     await expect(p.getByTestId('comparison')).toBeVisible()
     await expect(p.getByTestId('cheapest')).toContainText('Lowest reported matching offer')

@@ -25,6 +25,7 @@ fs.mkdirSync(SHOTS, { recursive: true })
 const fixture = (n: string) => JSON.parse(fs.readFileSync(`tests/fixtures/real-${n}.normalized.json`, 'utf8'))
 const SONY = fixture('sony')
 const SAMSUNG = fixture('samsung')
+const SSD = JSON.parse(fs.readFileSync('tests/fixtures/synthetic/ssd.json', 'utf8')) // INVENTED listings (see tests/fixtures/synthetic)
 
 type Fx = { candidates: unknown[]; source: unknown }
 const ok = (data: unknown) => ({ success: true, data })
@@ -546,5 +547,39 @@ test.describe('two accounts: ownership is enforced by the server', () => {
     expect(nb.pricesapi).toEqual([])
     await clearOwn(a.page)
     await clearOwn(b.page)
+  })
+
+  test('13. a general (non-featured) product: pick, save, reopen with its exact variant, remove; user B never sees it', async ({ users }) => {
+    const [a, b] = await users(2)
+    const n = net(a.page)
+    await clearOwn(a.page)
+    await clearOwn(b.page)
+    await mockSearch(a.page, SSD, 'WD Black SN850X 2TB')
+    await a.page.goto('/search')
+    await a.page.getByTestId('product-search-input').fill('WD Black SN850X 2TB')
+    await a.page.getByTestId('product-search-input').press('Enter')
+    await expect(a.page.getByTestId('comparison')).toBeVisible({ timeout: 20_000 })
+    await expect(a.page.getByTestId('variant-storage-2TB')).toBeVisible()
+    await expect(a.page.getByTestId('save-button')).toBeEnabled()
+    await a.page.getByTestId('save-button').click()
+    await expect(a.page.getByTestId('save-state')).toBeVisible()
+
+    expect(await savedNames(a.page)).toHaveLength(1)
+    await expect(a.page.getByTestId('saved-name')).toContainText('SN850X')
+    const id = (await a.page.getByTestId('saved-open').getAttribute('href'))!.split('/').pop()!
+
+    await mockSaved(a.page, SSD, 'WD Black SN850X 2TB', { stale: false, cachedAt: new Date() })
+    await a.page.getByTestId('saved-open').click()
+    await expect(a.page.getByTestId('comparison')).toBeVisible({ timeout: 20_000 })
+    await expect(a.page.getByTestId('target-label')).toContainText('SN850X')
+    await expect(a.page.getByTestId('variant-storage')).toHaveCount(0) // an exact saved variant is not switchable
+    expect(n.pricesapi).toEqual([])
+
+    expect(await savedNames(b.page)).toEqual([])
+    await b.page.goto(`/saved/${id}`)
+    await expect(b.page.getByTestId('saved-not-found')).toBeVisible({ timeout: 20_000 })
+
+    await clearOwn(a.page)
+    await expect(a.page.getByTestId('saved-empty')).toBeVisible()
   })
 })

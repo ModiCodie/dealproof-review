@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import ssd from '../../tests/fixtures/synthetic/ssd.json'
 import airpods from '../../tests/fixtures/synthetic/airpods.json'
 import vague from '../../tests/fixtures/synthetic/vague.json'
 import empty from '../../tests/fixtures/synthetic/empty.json'
@@ -23,6 +24,12 @@ describe('viewCandidates / initialPick', () => {
     expect(views.filter((v) => v.fit === 'fits')).toHaveLength(1)
     expect(views.find((v) => /1st/i.test(v.title))!.fit).not.toBe('fits')
     expect(initialPick(views)).toBe(views.find((v) => v.fit === 'fits')!.index)
+  })
+  it('treats a capacity written in the search as part of what a group must match', () => {
+    const views = viewCandidates('WD Black SN850X 2TB', cands(ssd))
+    expect(views.map((v) => v.fit)).toEqual(['fits', 'different'])
+    expect(initialPick(views)).toBe(0)
+    expect(viewCandidates('WD Black SN850X', cands(ssd)).map((v) => v.fit)).toEqual(['fits', 'fits']) // no capacity asked: the user chooses
   })
   it('pre-selects nothing when two groups fit equally or the search is general', () => {
     const two = cands(airpods).slice(0, 1).concat(cands(airpods).slice(0, 1))
