@@ -582,4 +582,62 @@ test.describe('two accounts: ownership is enforced by the server', () => {
     await clearOwn(a.page)
     await expect(a.page.getByTestId('saved-empty')).toBeVisible()
   })
+
+  test('14. a saved general comparison keeps its product group: reopen, refresh (reordered / gone), and a missing group', async ({ users }) => {
+    const [a] = await users(1)
+    const p = a.page
+    const n = net(p)
+    const Q = 'WD Black SN850X'
+    const [g2tb, g1tb] = SSD.candidates
+    await clearOwn(p)
+    await mockSearch(p, SSD, Q)
+    await p.goto('/search')
+    await p.getByTestId('product-search-input').fill(Q)
+    await p.getByTestId('product-search-input').press('Enter')
+    await expect(p.getByTestId('candidate-picker')).toBeVisible({ timeout: 20_000 })
+    await p.getByTestId('candidate-1').click() // the 1TB group
+    await expect(p.getByTestId('comparison')).toBeVisible()
+    await expect(p.getByTestId('save-button')).toBeEnabled()
+    await p.getByTestId('save-button').click()
+    await expect(p.getByTestId('save-state')).toBeVisible()
+
+    const reopen = async (fx: Fx) => {
+      await p.unroute('**/api/actions/getSavedComparison').catch(() => {})
+      await mockSaved(p, fx, Q, { stale: false, cachedAt: new Date() })
+      await p.goto('/saved')
+      await expect(p.getByTestId('saved-list')).toBeVisible({ timeout: 20_000 })
+      await p.getByTestId('saved-open').first().click()
+    }
+    // 1. reopen: the saved group only, never the 2TB group's listings, and no search
+    await reopen(SSD)
+    await expect(p.getByTestId('saved-candidate')).toContainText('1TB', { timeout: 20_000 })
+    await expect(p.getByTestId('comparison')).toBeVisible()
+    await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
+    await expect(p.getByTestId('comparison')).not.toContainText('Heatsink')
+    expect(n.searchCalls).toBe(1) // only the original search; opening a saved product ran none
+
+    // 2. explicit refresh when the group order changed: still the same group
+    await p.unroute('**/api/actions/searchProducts')
+    await mockSearch(p, { ...SSD, candidates: [g1tb, g2tb] }, Q)
+    await p.getByTestId('refresh-button').click()
+    await expect(p.getByTestId('refresh-note')).toBeVisible()
+    await expect(p.getByTestId('refresh-note')).not.toContainText('could not be identified')
+    await expect(p.getByTestId('saved-candidate')).toContainText('1TB')
+    await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
+
+    // 3. explicit refresh when the saved group is gone: no switch, snapshot kept, reason stated
+    await p.unroute('**/api/actions/searchProducts')
+    await mockSearch(p, { ...SSD, candidates: [g2tb] }, Q)
+    await p.getByTestId('refresh-button').click()
+    await expect(p.getByTestId('refresh-note')).toContainText('could not be identified')
+    await expect(p.getByTestId('comparison')).not.toContainText('WDS200T2X0E')
+    await expect(p.getByTestId('saved-candidate')).toContainText('1TB')
+
+    // 4. reopening against data that no longer has the group: a limitation, nothing compared
+    await reopen({ ...SSD, candidates: [g2tb] })
+    await expect(p.getByTestId('candidate-unresolved')).toBeVisible({ timeout: 20_000 })
+    await expect(p.getByTestId('comparison')).toHaveCount(0)
+    expect(n.pricesapi).toEqual([])
+    await clearOwn(p)
+  })
 })

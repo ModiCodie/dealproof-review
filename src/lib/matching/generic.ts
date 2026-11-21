@@ -468,6 +468,14 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
     const part = partVerdict(t, toks, ends, truncated)
     if (part) return part
   }
+  if (ends.length) {
+    // "<product> MagSafe Charging Case" names the case but not whether the earbuds come with it: complete product or
+    // case alone? Neither "replacement" nor "only" is present, but that does not prove it is complete.
+    const contents = caseOnlyCaveat(toks, t)
+    if (contents) {
+      return decide('AMBIGUOUS', 'The title names a charging case but does not say whether the earbuds are included.', [`Contents not established: ${contents}. It is not treated as an accessory, and not assumed to be the complete product.`], [{ attribute: 'contents', value: 'charging case named, earbuds not stated', effect: 'conflicts', from: 'title' }])
+    }
+  }
   if (missingCodes.length) {
     const c = missingCodes.map((x) => x.text.toUpperCase()).join(', ')
     if (otherCodes.length) {
@@ -579,8 +587,6 @@ export function classifyGeneric(target: GenericTarget, title: string | null): Ma
 
   // --- bundles, unknown words after the model name, trim levels, missing brand
   const caveats: string[] = []
-  const caseCaveat = caseOnlyCaveat(toks, t)
-  if (caseCaveat) caveats.push(caseCaveat)
   const bundle = t.match(BUNDLE)
   if (bundle) caveats.push(`sold with extras ("${bundle[0]}")`)
   const end = Math.max(...ends, -1)

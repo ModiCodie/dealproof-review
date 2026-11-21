@@ -52,3 +52,20 @@ The saved real response exposed defects, fixed without any new paid request:
 
 ### Real response and redistribution
 The real response stays **gitignored**. PricesAPI's terms (not legal advice) give no right to redistribute, so committed regression tests use synthetic titles written in the style of real listings; `live-sample.test.ts` and `tests/live-replay-shots.spec.ts` run only where the local file exists. The replay spec fixes the blank full-page screenshot (the app scrolls inside `<main>`, so `fullPage` captured one empty viewport) by sizing the viewport to the content after explicit readiness checks.
+
+## Saved generic comparisons keep their product group
+
+A search returns several product groups. Saving a generic comparison now records which one was picked, so reopening and refreshing compare the same product instead of pooling every group.
+
+**Stored** (inside the existing immutable `variant` JSON of `saved_products`; no schema change, no migration): the search `query`, the group's cleaned title (`t`), the provider ids PricesAPI returns for the group (`cp` = `pid`, `cc` = `catalog_id`, `cl` = `cluster_id`), and the chosen variant (`dim_*`, `pin_*`). The group's position in the result list is never stored or used. `productKey` is unchanged, so existing rows and the uniqueness rule keep working.
+
+**Reopen** (`getSavedComparison`, unchanged: owner-only, reads the cache, never searches, never uses quota). The client then calls `savedOffers`, which uses only the saved group's listings, judged by the saved target and variant. The same function scopes the price on the Saved list, so the list and the detail page agree and nothing about the price summary changes on reopening.
+
+**Matching rule** (`resolveCandidate`): the saved group is found only when a group has the **identical cleaned title AND at least one equal provider id**, and carries offers. We have seen one real response only, so we do not know provider ids stay stable between fresh searches: a changed id with the same title is *not* trusted, and a similar title never is. Limitation: if ids do turn out to change on every scrape, refresh would report the product as unidentifiable; relax the rule only once that is measured.
+
+**Explicit refresh.** The refresh still goes through `searchProducts` (12 h cache, per-user and global limits). The new result is matched to the saved identity. If it matches, the page shows the refreshed prices of the same group. If not, DealProof does not switch to another group and keeps the comparison already on screen, saying the identity could not be established. Limitation: the price cache is shared and the fresh search has already replaced it, so reopening that saved product later shows the "can't be identified" limitation (nothing compared) instead of the old snapshot; DealProof does not store per-user snapshots.
+
+**Older records.** Rows saved before this have the title but no ids. They are matched by exact cleaned title only (shown with a note), and if no stored group has that title they show a limitation and compare nothing. Sony/Logitech/Samsung rows have no candidate and behave exactly as before (every group pooled; their own rules judge each listing).
+
+### Complete product vs accessory
+A part is rejected only on specific evidence ("X only", replacement/spare, compatibility wording, "<part> for <product>", a part word before the product). A title that names a charging case but does not say whether the earbuds come with it (for example "... MagSafe Charging Case (Lightning)") is **ambiguous**: neither treated as an accessory nor assumed complete. "... with MagSafe Charging Case" is a complete product; "Replacement Charging Case" and "Charging Case Only" are accessories; "Earbuds Only" is the right product but an incomplete one.

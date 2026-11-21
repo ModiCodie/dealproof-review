@@ -15,7 +15,8 @@
 import { FAMILIES, targetLabel } from './matching'
 import { normalizeText } from './matching/text'
 import type { FamilyId, GenericSpec, GenericTarget, ProductTarget } from './matching'
-import type { SearchQuota, SearchResult } from './pricing-types'
+import type { ProductCandidate, SearchQuota, SearchResult } from './pricing-types'
+import { candidateRef, resolveCandidate, type CandidateRef, type Resolution } from './saved-candidate'
 
 export const SAVED_COLLECTION = 'saved_products'
 export const SAVED_MARKET = 'us'
@@ -40,6 +41,8 @@ export interface SavedProduct {
   target: ProductTarget
   displayName: string
   query: string
+  /** Generic products: the product group that was picked (no ids for records saved before this was recorded). null for the specialised families. */
+  candidate: CandidateRef | null
 }
 
 /** Short stable hash (djb2, base 36) so two different picked candidates of one search stay different saves. */
@@ -69,12 +72,18 @@ export function productKey(target: ProductTarget): string {
 }
 
 /** Row data for a new save. No owner field: the server stamps it. */
-export function toSavedRow(target: ProductTarget, query: string): Omit<SavedRow, 'userId'> {
+export function toSavedRow(target: ProductTarget, query: string, candidate?: ProductCandidate | null): Omit<SavedRow, 'userId'> {
   if (target.family === GENERIC) {
     const s = target.spec
     const variant: Record<string, string> = { t: s.title, i: s.identity, b: s.brand ?? '', r: s.trim.join(' ') }
     for (const [k, v] of Object.entries(s.pins)) variant[`pin_${k}`] = v
     for (const [k, v] of Object.entries(target.variant)) variant[`dim_${k}`] = v
+    if (candidate) {
+      const ref = candidateRef(candidate)
+      if (ref.pid) variant.cp = ref.pid
+      if (ref.catalogId) variant.cc = ref.catalogId
+      if (ref.clusterId) variant.cl = ref.clusterId
+    }
     return { productKey: productKey(target), family: GENERIC, variant, displayName: targetLabel(target).slice(0, 200), query, market: SAVED_MARKET }
   }
   const f = FAMILIES[target.family]
@@ -91,12 +100,19 @@ export function toSavedRow(target: ProductTarget, query: string): Omit<SavedRow,
 
 const shortText = (v: unknown, max: number): string | null => (typeof v === 'string' && v.length <= max ? v : null)
 
-function parseGeneric(raw: Record<string, unknown>): GenericTarget | null {
+function parseGeneric(raw: Record<string, unknown>): { target: GenericTarget; candidate: CandidateRef } | null {
   const title = shortText(raw.t, 120)
   const identity = shortText(raw.i, 120)
   const brand = shortText(raw.b, 40)
   const trim = shortText(raw.r, 60)
   if (!title || !identity || brand === null || trim === null) return null
+  const ids: Record<'cp' | 'cc' | 'cl', string | null> = { cp: null, cc: null, cl: null }
+  for (const k of ['cp', 'cc', 'cl'] as const) {
+    if (raw[k] === undefined || raw[k] === '') continue
+    const v = shortText(raw[k], 64)
+    if (!v) return null // a malformed identifier: reject the row, don't guess
+    ids[k] = v
+  }
   const pins: Record<string, string> = {}
   const variant: Record<string, string> = {}
   for (const [k, v] of Object.entries(raw)) {
@@ -107,7 +123,7 @@ function parseGeneric(raw: Record<string, unknown>): GenericTarget | null {
     else if (k.startsWith('dim_') && val && DIM_KEYS.includes(k.slice(4))) variant[k.slice(4)] = val
   }
   const spec: GenericSpec = { title, identity, brand: brand || null, trim: trim ? trim.split(' ').slice(0, 2) : [], pins }
-  return { family: GENERIC, variant, spec }
+  return { target: { family: GENERIC, variant, spec }, candidate: { pid: ids.cp, catalogId: ids.cc, clusterId: ids.cl, title } }
 }
 const DIM_KEYS = ['storage', 'memory', 'generation', 'size', 'heatsink', 'connector']
 
@@ -122,10 +138,12 @@ export function parseSaved(rec: { recordId: string; createdAt: string; data: Par
   if (typeof d.query !== 'string' || d.query.length < 2) return null
   const raw = d.variant && typeof d.variant === 'object' ? (d.variant as Record<string, unknown>) : {}
   let target: ProductTarget
+  let candidate: CandidateRef | null = null
   if (d.family === GENERIC) {
     const g = parseGeneric(raw)
     if (!g) return null
-    target = g
+    target = g.target
+    candidate = g.candidate
   } else {
     if (!(d.family in FAMILIES)) return null
     const family = FAMILIES[d.family as FamilyId]
@@ -144,7 +162,18 @@ export function parseSaved(rec: { recordId: string; createdAt: string; data: Par
     target,
     displayName: targetLabel(target),
     query: d.query,
+    candidate,
   }
+}
+
+/**
+ * The offers a saved product is compared on. Specialised families pool every group (their rules judge each
+ * listing). A generic product uses ONLY the group that was saved; if it cannot be identified, no offers are used.
+ */
+export function savedOffers(saved: SavedProduct, candidates: ProductCandidate[]): { offers: ProductCandidate['offers']; resolution: Resolution | null } {
+  if (!saved.candidate) return { offers: candidates.flatMap((c) => c.offers), resolution: null }
+  const resolution = resolveCandidate(saved.candidate, candidates)
+  return { offers: resolution.status === 'matched' ? resolution.indices.flatMap((i) => candidates[i].offers) : [], resolution }
 }
 
 // ----------------------------------------------------- server action response

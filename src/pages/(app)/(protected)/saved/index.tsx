@@ -22,8 +22,7 @@ import { formatPrice } from '@/components/comparison/ComparisonView'
 import { getSavedComparison } from '@/lib/api'
 import { formatAge, formatDate } from '@/lib/format'
 import { buildComparison } from '@/lib/matching'
-import type { ProductTarget } from '@/lib/matching'
-import { parseSaved, SAVED_COLLECTION, type SavedProduct, type SavedRow } from '@/lib/saved'
+import { parseSaved, savedOffers, SAVED_COLLECTION, type SavedProduct, type SavedRow } from '@/lib/saved'
 import { usePageTitle } from '@/lib/use-page-title'
 import { cn } from '@/lib/utils'
 
@@ -139,7 +138,7 @@ function SavedCard({
         </div>
       </div>
 
-      <LastPrice id={saved.recordId} target={saved.target} />
+      <LastPrice id={saved.recordId} saved={saved} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
         <Link
@@ -173,19 +172,20 @@ type Last =
   | { status: 'ok'; price: string; seller: string | null; observed: string | null; storedAgo: string | null; stale: boolean; flagged: boolean }
 
 /** The lowest reported matching offer in the data already stored for this product. Read-only; never a paid search. */
-function LastPrice({ id, target }: { id: string; target: ProductTarget }) {
+function LastPrice({ id, saved }: { id: string; saved: SavedProduct }) {
   const [last, setLast] = useState<Last>({ status: 'loading' })
   // `target` is rebuilt on every parent render; read it through a ref so only a different record re-fetches.
-  const targetRef = useRef(target)
-  targetRef.current = target
+  const savedRef = useRef(saved)
+  savedRef.current = saved
   useEffect(() => {
     const c = new AbortController()
     getSavedComparison(id, c.signal)
       .then((r) => {
         if (!r.success || !r.data.result) return setLast({ status: 'none' })
         const { result, stale } = r.data
-        const offers = result.candidates.flatMap((x) => x.offers)
-        const cheapest = offers.length ? buildComparison(targetRef.current, offers, result.source.scrapedAt).cheapest : null
+        // same scoping as the detail page, so the list never shows another product group's price
+        const { offers } = savedOffers(savedRef.current, result.candidates)
+        const cheapest = offers.length ? buildComparison(savedRef.current.target, offers, result.source.scrapedAt).cheapest : null
         if (!cheapest) return setLast({ status: 'none' })
         const o = cheapest.offer
         setLast({

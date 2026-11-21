@@ -21,7 +21,8 @@ import { usePageTitle } from '@/lib/use-page-title'
 import { getSavedComparison, searchProducts } from '@/lib/api'
 import { formatAge, formatTime } from '@/lib/format'
 import type { SearchFailure, SearchQuota, SearchResult } from '@/lib/pricing-types'
-import { parseSaved, SAVED_COLLECTION, type SavedRow } from '@/lib/saved'
+import { parseSaved, savedOffers, SAVED_COLLECTION, type SavedRow } from '@/lib/saved'
+import { UNRESOLVED_TEXT } from '@/lib/saved-candidate'
 
 type Load =
   | { status: 'loading' }
@@ -69,7 +70,13 @@ export default function SavedProductPage() {
     setRefreshNote(null)
     try {
       const r = await searchProducts(saved.query)
-      if (r.success) {
+      if (r.success && saved.candidate && savedOffers(saved, r.data.result.candidates).resolution?.status !== 'matched') {
+        // Never switch to a different product group: keep what is shown and say why.
+        setRefreshNote(
+          'Fresh prices were fetched, but the product you saved could not be identified in them with confidence, so DealProof did not switch to another product. The comparison below is unchanged: it is the snapshot you already had open. Reopening this saved product later will read the newly stored data and show a limitation instead.',
+        )
+        setLoad((l) => (l.status === 'ready' ? { ...l, quota: r.data.quota } : l))
+      } else if (r.success) {
         setLoad({ status: 'ready', result: r.data.result, stale: false, quota: r.data.quota })
         setRefreshNote(
           r.data.fromCache
@@ -123,7 +130,9 @@ export default function SavedProductPage() {
 
   const result = load.status === 'ready' ? load.result : null
   const hasOffers = !!result && result.candidates.some((c) => c.offers.length > 0)
-  const offers = result ? result.candidates.flatMap((c) => c.offers) : []
+  // Generic products compare only the saved product group; see savedOffers.
+  const { offers, resolution } = result ? savedOffers(saved, result.candidates) : { offers: [], resolution: null }
+  const unresolved = hasOffers && resolution?.status === 'unresolved' ? resolution : null
   const quota = load.status === 'ready' ? load.quota : null
   const stale = load.status === 'ready' && load.stale
   const missing = load.status === 'ready' && !hasOffers
@@ -213,7 +222,23 @@ export default function SavedProductPage() {
         </section>
       )}
 
-      {hasOffers && result && (
+      {unresolved && (
+        <Notice testId="candidate-unresolved" role="note" tone="caution" icon={TriangleAlert} className="mt-6" title="The product you saved can’t be identified in the stored data">
+          {UNRESOLVED_TEXT[unresolved.reason]} To avoid showing another product’s offers, nothing is compared. Use “{needsSearch ? 'Get fresh prices' : 'Refresh prices'}” to look again, or search for the product and save it afresh.
+        </Notice>
+      )}
+      {resolution?.status === 'matched' && (
+        <p className="mt-6 text-sm text-muted-foreground" data-testid="saved-candidate">
+          Product group: <span className="text-foreground">“{resolution.title}”</span>
+          {resolution.basis === 'ids_and_title' ? ' (matched by the feed’s product id and title)' : ''}
+        </p>
+      )}
+      {resolution?.status === 'matched' && resolution.basis === 'title_only' && (
+        <Notice testId="candidate-legacy" role="note" tone="neutral" icon={Info} className="mt-3">
+          This product was saved before DealProof recorded which product group was chosen. It was matched to the group with the same title; check it is the one you meant.
+        </Notice>
+      )}
+      {hasOffers && result && offers.length > 0 && (
         <div className="mt-6">
           <ComparisonView
             key={`${saved.productKey}|${result.source.scrapedAt ?? ''}|${result.cachedAt}`}

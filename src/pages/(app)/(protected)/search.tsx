@@ -426,7 +426,7 @@ function GeneralCompared({ query, candidates, offers, scrapedAt }: { query: stri
             offers={scoped}
             scrapedAt={scrapedAt}
             initialTarget={built.target}
-            renderActions={(t) => <SaveControl target={t} query={query} />}
+            renderActions={(t) => <SaveControl target={t} query={query} candidate={chosen} />}
           />
         </>
       )}

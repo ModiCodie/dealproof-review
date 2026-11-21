@@ -16,7 +16,6 @@ const cls = (title: string) => classifyGeneric(target, title).class
 describe('charging case: complete product vs standalone part (Task 1A)', () => {
   it('keeps a complete product that includes its charging case', () => {
     for (const t of [
-      'Apple AirPods Pro 2 - White - MagSafe Charging Case (Lightning)',
       'Apple AirPods Pro 2nd Generation with MagSafe Charging Case',
       'Apple AirPods Pro 2 Wireless Earbuds w/ Wireless Charging Case',
     ]) expect(['LIKELY', 'EXACT']).toContain(cls(t))
@@ -33,6 +32,28 @@ describe('charging case: complete product vs standalone part (Task 1A)', () => {
   it('does not guess when a title is cut off: it names the case but not the earbuds', () => {
     const r = classifyGeneric(target, 'Apple AirPods Pro 2 MagSafe Charging Case')
     expect(r.class).not.toBe('REJECTED')
+  })
+  it('audit: complete product / accessory or incomplete / contents not established', () => {
+    const rows: [string, string][] = [
+      ['Apple AirPods Pro 2 with MagSafe Charging Case', 'complete'],
+      ['Apple AirPods Pro 2 Wireless Earbuds with Charging Case, Customizable Fit', 'complete'],
+      ['Apple AirPods Pro 2 MagSafe Charging Case (Lightning)', 'ambiguous'],
+      ['Apple AirPods Pro 2 - White - MagSafe Charging Case', 'ambiguous'],
+      ['Apple AirPods Pro 2 Replacement Charging Case', 'accessory'],
+      ['Apple AirPods Pro 2 Charging Case Only', 'accessory'],
+      ['Apple AirPods Pro 2 Earbuds Only', 'incomplete'],
+    ]
+    for (const [title, want] of rows) {
+      const m = classifyGeneric(target, title)
+      const cond = detectCondition(title).value
+      const got = m.class === 'REJECTED' ? 'accessory' : m.class === 'AMBIGUOUS' ? 'ambiguous' : cond === 'incomplete' ? 'incomplete' : 'complete'
+      expect([title, got]).toEqual([title, want])
+    }
+  })
+  it('never treats the absence of "replacement" or "only" as proof of a complete product', () => {
+    const m = classifyGeneric(target, 'Apple AirPods Pro 2 MagSafe Charging Case (Lightning)')
+    expect(m.class).toBe('AMBIGUOUS')
+    expect(m.summary).toMatch(/does not say whether the earbuds are included/)
   })
 })
 

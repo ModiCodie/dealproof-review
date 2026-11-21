@@ -16,11 +16,12 @@ import { useMutations, useQuery } from 'deepspace'
 import { Button } from '@/components/ui'
 import { Pill } from '@/components/dp/ui'
 import type { ProductTarget } from '@/lib/matching'
+import type { ProductCandidate } from '@/lib/pricing-types'
 import { productKey, SAVED_COLLECTION, toSavedRow, type SavedRow } from '@/lib/saved'
 
 type NewSaved = Omit<SavedRow, 'userId'>
 
-export function SaveControl({ target, query }: { target: ProductTarget; query: string }) {
+export function SaveControl({ target, query, candidate }: { target: ProductTarget; query: string; candidate?: ProductCandidate | null }) {
   const { records, status } = useQuery<SavedRow>(SAVED_COLLECTION)
   // `ready` = the record room can accept writes. It is separate from the query's `status`:
   // both must hold before a write control is enabled.
@@ -35,7 +36,7 @@ export function SaveControl({ target, query }: { target: ProductTarget; query: s
     setBusy(true)
     setMessage(null)
     try {
-      await createConfirmed(toSavedRow(target, query))
+      await createConfirmed(toSavedRow(target, query, candidate))
       setMessage('Saved. DealProof does not monitor prices; reopen it from Saved and refresh when you want new data.')
     } catch (e) {
       const text = e instanceof Error ? e.message : String(e)
