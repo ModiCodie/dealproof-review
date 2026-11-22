@@ -19,15 +19,43 @@ export type MatchClass =
   | 'DIFFERENT_VARIANT' // same product family, different configuration
   | 'REJECTED' // a different product, or not the product itself (accessory etc.)
 
-export type Condition = 'new' | 'used' | 'refurbished' | 'open_box' | 'unknown'
+export type Condition = 'new' | 'used' | 'refurbished' | 'open_box' | 'defective' | 'incomplete' | 'unknown'
 
 export type FamilyId = 'sony-wh-1000xm5' | 'logitech-mx-master-3s' | 'samsung-990-pro'
 
-/** What the user wants to compare. `variant` holds one value per family dimension. */
-export interface ProductTarget {
+/** A product with hand-written rules (see families.ts). `variant` holds one value per family dimension. */
+export interface FamilyTarget {
   family: FamilyId
   variant: Record<string, string>
 }
+
+/**
+ * Any other product. What identifies it comes from the user's search text plus
+ * the product they picked from the candidates. Nothing here is a verified
+ * product identifier: PricesAPI Search returns no GTIN/UPC/MPN/brand fields.
+ */
+export interface GenericSpec {
+  /** Title of the candidate the user picked. Display only. */
+  title: string
+  /** Normalized identity words/codes/numbers from the search text, e.g. "airpods pro 2". */
+  identity: string
+  /** First identity word when the search had two or more. Missing from a listing: weaker evidence, not a conflict. */
+  brand: string | null
+  /** Words that follow the model name in the picked title (e.g. "absolute"). A listing without them is only a likely match. */
+  trim: string[]
+  /** Attribute values pinned by the search text or the picked title (storage, memory, generation, size). */
+  pins: Record<string, string>
+}
+
+export interface GenericTarget {
+  family: 'generic'
+  /** The chosen value for each variant dimension found in the listings. */
+  variant: Record<string, string>
+  spec: GenericSpec
+}
+
+/** What the user wants to compare. */
+export type ProductTarget = FamilyTarget | GenericTarget
 
 export interface DimensionOption {
   value: string
@@ -40,6 +68,8 @@ export interface Dimension {
   label: string
   options: DimensionOption[]
   default: string
+  /** Why `default` was pre-selected, when that is not obvious (generic products). */
+  note?: string
 }
 
 export interface FamilyInfo {
@@ -137,7 +167,9 @@ export interface OfferAnalysis {
   id: string
   offer: NormalizedOffer
   match: MatchDecision
-  condition: { value: Condition; evidence: string | null }
+  condition: { value: Condition; evidence: string | null; uncertain?: boolean }
+  /** Material configuration attributes (storage, connector ...) that other listings state but this title does not. */
+  unresolved: string[]
   availability: Availability
   seller: SellerIdentity
   priceVerification: PriceVerification
@@ -163,6 +195,17 @@ export interface CheapestPick {
   caveats: string[]
 }
 
+export interface PriceSummary {
+  /** 'strict' (general products): the headline needs enough new-condition listings from independent sellers. */
+  policy: 'strict' | 'standard'
+  reliable: boolean
+  /** Plain-language reason when not reliable. */
+  reason: string | null
+  /** Independent sellers with a qualifying listing, and how many are needed. */
+  sellers: number
+  needed: number
+}
+
 export interface Comparison {
   target: ProductTarget
   targetLabel: string
@@ -176,6 +219,14 @@ export interface Comparison {
   differentVariants: VariantGroup[]
   /** Same product + variant but used / refurbished / open-box. */
   secondHand: OfferAnalysis[]
+  /** Defective, for parts, or sold incomplete: never a normal full-product price. */
+  defective: OfferAnalysis[]
+  /** General products only: same product, condition not stated. Shown, but never priced as if new. */
+  unknownCondition: OfferAnalysis[]
+  /** General products only: the title does not state a configuration (e.g. connector, capacity) that other listings show differs. */
+  needsConfig: OfferAnalysis[]
+  /** Whether the offers support a lowest-price headline, and if not, why. */
+  priceSummary: PriceSummary
   /** Different product or accessory. */
   rejected: OfferAnalysis[]
   /** Lowest reported matching in-stock offer. May be flagged; it is then shown with a warning. */
@@ -195,4 +246,9 @@ export interface Comparison {
   filterSummary: string
   /** Feed observation time for these offers (Search has no per-offer time). */
   sourceScrapedAt: string | null
+  /**
+   * Set when the product could not be identified well enough to compare safely
+   * (generic products only). Nothing is then called a match, and no lowest price is shown.
+   */
+  limitation: string | null
 }

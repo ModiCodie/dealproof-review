@@ -5,7 +5,7 @@
  */
 import type { ActionResult, ActionTools } from 'deepspace/worker'
 import { searchCacheSchema, usageClaimsSchema } from '../../schemas/pricing-schema'
-import { savedProductsSchema } from '../../schemas/saved-schema'
+import { savedProductsSchema, savedSnapshotsSchema } from '../../schemas/saved-schema'
 
 type Row = { recordId: string; data: Record<string, unknown> }
 
@@ -15,6 +15,7 @@ export function makeFakeTools(): ActionTools & { dump(c: string): Row[] } {
     [searchCacheSchema.name]: searchCacheSchema.uniqueOn ?? [],
     [usageClaimsSchema.name]: usageClaimsSchema.uniqueOn ?? [],
     [savedProductsSchema.name]: savedProductsSchema.uniqueOn ?? [],
+    [savedSnapshotsSchema.name]: savedSnapshotsSchema.uniqueOn ?? [],
   }
   let seq = 0
   const rows = (c: string) => tables.get(c) ?? (tables.set(c, []), tables.get(c)!)

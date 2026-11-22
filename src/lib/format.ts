@@ -23,3 +23,10 @@ export function formatAge(iso: string | null | undefined, now = Date.now()): str
   if (s < 129_600) return `${Math.round(s / 3600)} hours ago`
   return `${Math.round(s / 86_400)} days ago`
 }
+
+/** "Nov 19, 2026" (locale-aware date, no time). */
+export function formatDate(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}

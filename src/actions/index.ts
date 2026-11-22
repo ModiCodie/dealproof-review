@@ -2,6 +2,7 @@ import type { ActionHandler } from 'deepspace/worker'
 import type { Env } from '../../worker'
 import { runSearch } from '../server/pricing/search'
 import { getSavedComparison } from '../server/saved/comparison'
+import { captureSavedSnapshot, discardSavedSnapshot } from '../server/saved/snapshot'
 
 /**
  * Server actions, callable from the browser as `POST /api/actions/<name>`.
@@ -27,5 +28,19 @@ export const actions: Record<string, ActionHandler<Env>> = {
    */
   getSavedComparison: async ({ userId, params, tools, env }) => {
     return getSavedComparison(params?.savedId, { tools, userId, configEnv: env })
+  },
+
+  /**
+   * Store the last successfully captured prices for a saved general product, copied from the
+   * server's own cache. Owner-only; never calls the price API; never uses quota; writes nothing
+   * if the saved product group cannot be confirmed in the stored data.
+   */
+  captureSavedSnapshot: async ({ userId, params, tools }) => {
+    return captureSavedSnapshot(params?.savedId, { tools, userId })
+  },
+
+  /** Delete the snapshot of a saved product that was removed. Owner-only. */
+  discardSavedSnapshot: async ({ userId, params, tools }) => {
+    return discardSavedSnapshot(params?.savedId, { tools, userId })
   },
 }

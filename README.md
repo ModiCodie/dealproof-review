@@ -131,3 +131,7 @@ Note: the local dev server loads the real `PRICESAPI_KEY` from `.dev.vars`, so a
 [`docs/feasibility-plan.md`](docs/feasibility-plan.md) · [`docs/api-experiment-results.md`](docs/api-experiment-results.md) · [`docs/day2-implementation.md`](docs/day2-implementation.md) · [`docs/day3-implementation.md`](docs/day3-implementation.md) · [`docs/day4-implementation.md`](docs/day4-implementation.md) · [`docs/deployment-issue.md`](docs/deployment-issue.md) · [`docs/submission-note.md`](docs/submission-note.md) · [`docs/live-coding-prep.md`](docs/live-coding-prep.md)
 
 License: not yet chosen (see the repository owner).
+
+## General product search
+
+Search any consumer product, pick the intended product, then compare offers. See [docs/general-search.md](docs/general-search.md) for the architecture, matching rules and limits.

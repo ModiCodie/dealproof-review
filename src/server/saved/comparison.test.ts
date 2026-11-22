@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import sony from '../../../tests/fixtures/real-sony.normalized.json'
 import { getSavedComparison } from './comparison'
 import { makeFakeTools } from '../pricing/test-helpers'
-import { SAVED_COLLECTION, toSavedRow } from '../../lib/saved'
+import airpods from '../../../tests/fixtures/synthetic/airpods.json'
+import type { ProductCandidate } from '../../lib/pricing-types'
+import { targetForCandidate } from '../../lib/candidates'
+import { parseSaved, savedOffers, SAVED_COLLECTION, toSavedRow } from '../../lib/saved'
 import { cacheKey } from '../pricing/normalize'
 import source from './comparison.ts?raw'
 
@@ -121,5 +124,49 @@ describe('saved_products: duplicates (fake mirrors the DO uniqueOn rule)', () =>
     expect((await tools.create(SAVED_COLLECTION, row)).success).toBe(true)
     expect((await tools.create(SAVED_COLLECTION, row)).success).toBe(false)
     expect((await tools.create(SAVED_COLLECTION, { ...row, userId: 'user-b' })).success).toBe(true)
+  })
+})
+
+describe('getSavedComparison: generic saved products keep their candidate identity', () => {
+  const G_QUERY = 'Apple AirPods Pro 2'
+  const cands = airpods.candidates as unknown as ProductCandidate[]
+  async function seedGeneric(owner = 'user-a') {
+    const tools = makeFakeTools()
+    const pick = cands[0]
+    const { target } = targetForCandidate(G_QUERY, pick, pick.offers.map((o) => o.title))
+    const created = await tools.create(SAVED_COLLECTION, { ...toSavedRow(target, G_QUERY, pick), userId: owner })
+    if (!created.success) throw new Error('seed failed')
+    await tools.create('search_cache', {
+      key: cacheKey('us', G_QUERY), market: 'us', query: G_QUERY,
+      payload: { candidates: airpods.candidates, source: airpods.source },
+      cachedAtMs: T0 - HOUR, expiresAtMs: T0 + 11 * HOUR,
+    })
+    return { tools, id: created.data.recordId, pick }
+  }
+
+  it('returns the owner the saved variant with its candidate ids; the client can then pick the same group', async () => {
+    const { tools, id, pick } = await seedGeneric()
+    const r = await call(tools, id)
+    expect(r.success).toBe(true)
+    if (!r.success) return
+    expect(r.data.saved.variant).toMatchObject({ cp: String(pick.pid) })
+    const saved = parseSaved({ recordId: id, createdAt: '2026-11-20T00:00:00Z', data: { ...tools.dump(SAVED_COLLECTION)[0].data } as never })!
+    const s = savedOffers(saved, r.data.result!.candidates)
+    expect(s.resolution).toMatchObject({ status: 'matched', basis: 'ids_and_title' })
+    expect(s.offers).toHaveLength(pick.offers.length)
+    expect(s.offers.length).toBeLessThan(r.data.result!.candidates.flatMap((c) => c.offers).length) // not pooled
+  })
+
+  it("never lets another user read someone else's generic saved product", async () => {
+    const { tools, id } = await seedGeneric('user-a')
+    const other = await call(tools, id, 'user-b')
+    expect(other).toMatchObject({ success: false, code: 'not_found' })
+    expect(JSON.stringify(other)).not.toMatch(/AirPods|cp|pid/)
+  })
+
+  it('opening it uses no quota and no search', async () => {
+    const { tools, id } = await seedGeneric()
+    await call(tools, id)
+    expect(tools.dump('usage_claims')).toHaveLength(0)
   })
 })

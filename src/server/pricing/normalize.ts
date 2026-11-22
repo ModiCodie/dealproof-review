@@ -38,14 +38,44 @@ export function validateQuery(raw: unknown): QueryValidation {
   if (/[\u0000-\u001f\u007f]/.test(query)) {
     return { ok: false, message: 'Search contains unsupported characters.' }
   }
+  if (!/[\p{L}\p{N}]/u.test(query)) {
+    return { ok: false, message: 'Enter a product name or model, not just symbols.' }
+  }
   if (/:\/\//.test(query) || /^www\./i.test(query)) {
     return { ok: false, message: 'Searching by URL is not supported yet. Enter a product name.' }
   }
   return { ok: true, query }
 }
 
-/** Cache key: same query (case/space-insensitive) + market share one entry. */
+/**
+ * What makes two queries "the same search". Case, repeated spaces and punctuation
+ * are ignored, and a hyphen/underscore/apostrophe joining a letter to a letter or
+ * digit is dropped, so "Sony WH-1000XM5", "sony wh1000xm5" and " SONY  WH-1000XM5 "
+ * share one cache entry and one paid search. Spaces and decimal points between
+ * words and numbers are kept: "Galaxy A5 5G" and "Galaxy A55G", or "27.5 inch" and
+ * "275 inch", are different products and must never share a cache entry.
+ * (A different spelling only costs that user one more of their own daily searches.)
+ */
+export function canonicalQuery(query: string): string {
+  return query
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/(?<=\p{L})[-_'\u2019\u2013\u2014\u2212]+(?=[\p{L}\p{N}])|(?<=\p{N})[-_'\u2019\u2013\u2014\u2212]+(?=\p{L})/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+}
+
+/** Cache key: the same canonical query + market share one entry. */
 export function cacheKey(market: string, query: string): string {
+  return `${market}|${canonicalQuery(query)}`
+}
+
+/**
+ * The key older versions wrote (lower-cased query, punctuation kept). Still read,
+ * so results cached before this change keep serving and saved products reopen
+ * their stored data; new writes always use `cacheKey`.
+ */
+export function legacyCacheKey(market: string, query: string): string {
   return `${market}|${query.toLowerCase()}`
 }
 

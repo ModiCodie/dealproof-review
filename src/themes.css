@@ -44,3 +44,47 @@
   --color-shell: #fafafa;
   --color-shell-panel: #ffffff;
 }
+
+/*
+ * DealProof — the app's own light theme.
+ * Cool off-white canvas, white cards, one ink-blue accent, and a small set of
+ * semantic tones so match / caution / variant states read the same everywhere.
+ * Text/background pairs below meet WCAG AA (4.5:1) for body text.
+ */
+[data-theme="dealproof"] {
+  color-scheme: light;
+  --color-background: #f5f6f8;
+  --color-foreground: #121722;
+  --color-card: #ffffff;
+  --color-card-foreground: #121722;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #121722;
+  --color-primary: #2447d6;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eceff4;
+  --color-secondary-foreground: #121722;
+  --color-muted: #eef0f4;
+  --color-muted-foreground: #566074;
+  --color-accent: #e7ebf2;
+  --color-accent-foreground: #121722;
+  --color-destructive: #c0301d;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #dde1e9;
+  --color-input: #c9cfdb;
+  --color-ring: #2447d6;
+  --radius: 0.75rem;
+  --shadow-card: 0 1px 2px 0 rgba(18, 23, 34, 0.05);
+  --shadow-card-hover: 0 4px 14px 0 rgba(18, 23, 34, 0.08);
+  --color-shell: #f5f6f8;
+  --color-shell-panel: #ffffff;
+
+  --color-ok: #0b7348;
+  --color-ok-soft: #e5f4ec;
+  --color-likely: #1c5aa6;
+  --color-likely-soft: #e7f0fb;
+  --color-caution: #8a4a06;
+  --color-caution-soft: #fff4de;
+  --color-caution-line: #efc57a;
+  --color-variant: #5a3dc0;
+  --color-variant-soft: #eeeaff;
+}

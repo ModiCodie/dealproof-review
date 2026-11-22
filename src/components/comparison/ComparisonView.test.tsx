@@ -3,7 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import samsung from '../../../tests/fixtures/real-samsung.normalized.json'
 import sony from '../../../tests/fixtures/real-sony.normalized.json'
 import { ComparisonView } from './ComparisonView'
-import { detectTarget } from '@/lib/matching'
+import ssdFx from '../../../tests/fixtures/synthetic/ssd.json'
+import vague from '../../../tests/fixtures/synthetic/vague.json'
+import { buildGenericSpec, detectTarget, makeGenericTarget } from '@/lib/matching'
 import type { NormalizedOffer } from '@/lib/pricing-types'
 
 const offersOf = (fx: { candidates: unknown[] }) => (fx.candidates as { offers: NormalizedOffer[] }[]).flatMap((c) => c.offers)
@@ -19,7 +21,7 @@ describe('ComparisonView (rendered from real fixtures)', () => {
       expect(samsungHtml).toContain(label)
     }
     expect(samsungHtml).toContain('Likely the same, some details missing')
-    expect(sonyHtml).toContain('Same model and variant')
+    expect(sonyHtml).toContain('Title names the same model and variant')
     expect(samsungHtml).toContain('Different variant')
     expect(samsungHtml).toContain('Availability: Backordered')
   })
@@ -49,7 +51,9 @@ describe('ComparisonView (rendered from real fixtures)', () => {
     expect(sonyHtml).toMatch(/Unusually low compared with other listings — \d+% below the median of \d+ independent sellers/)
     expect(sonyHtml).toContain('not evidence of a problem with the listing and not a guarantee of a good deal')
     expect(sonyHtml).toContain('rule of thumb based on other listings')
-    expect(sonyHtml).toMatch(/<summary[^>]*>Unusually low compared with other listings/) // section title
+    // The group is titled "Unusually low prices"; the full neutral explanation stays one tap away ("Why this is flagged").
+    expect(sonyHtml).toMatch(/<summary[^>]*><span[^>]*>Unusually low prices/)
+    expect(sonyHtml).toContain('Why this is flagged')
   })
 
   const headline = (html: string) => html.slice(html.indexOf('data-testid="cheapest"'), html.indexOf('data-testid="filter-summary"'))
@@ -58,14 +62,14 @@ describe('ComparisonView (rendered from real fixtures)', () => {
     const h = headline(samsungHtml)
     expect(h).toContain('Likely the same, some details missing')
     expect(h).toContain('Not confirmed as the exact variant')
-    expect(h).not.toContain('Same model and variant')
+    expect(h).not.toContain('Title names the same model and variant')
     // the reference offer is also a likely match and says so
     expect(h).toContain('likely match, not confirmed')
   })
 
   it('an exact headline match does not claim uncertainty', () => {
     const h = headline(sonyHtml)
-    expect(h).toContain('Same model and variant')
+    expect(h).toContain('Title names the same model and variant')
     expect(h).not.toContain('Not confirmed as the exact variant')
   })
 
@@ -93,5 +97,31 @@ describe('ComparisonView (rendered from real fixtures)', () => {
     expect(html).toContain('data-testid="slot"')
     expect(html).not.toContain('data-testid="variant-capacity"')
     expect(html).toContain('one exact variant')
+  })
+})
+
+describe('ComparisonView: general (non-featured) products', () => {
+  const ssd = ssdFx
+  const vagueFx = () => vague
+  const renderGeneric = (fx: typeof ssdFx, q: string, pick: number) => {
+    const offers = offersOf(fx)
+    const target = makeGenericTarget(buildGenericSpec(q, fx.candidates[pick].title), offers.map((o) => o.title))
+    return renderToStaticMarkup(<ComparisonView offers={offers} scrapedAt={fx.source.scrapedAt} initialTarget={target} />)
+  }
+  it('renders a generic comparison with discovered variant controls and the title-only caveat', () => {
+    const html = renderGeneric(ssd, 'WD Black SN850X 2TB', 0)
+    expect(html).toContain('data-testid="variant-storage"')
+    expect(html).toContain('data-testid="variant-storage-1TB"')
+    expect(html).toContain('data-testid="variant-heatsink"')
+    expect(html).not.toContain('data-testid="variant-memory"') // nothing invented
+    expect(html).toContain('matched by fixed rules on their titles only')
+    expect(html).toContain('Lowest reported matching offer')
+    expect(html).not.toMatch(/DIFFERENT_VARIANT|AMBIGUOUS|REJECTED|\bEXACT\b/)
+  })
+  it('refuses to name a lowest price when the search names no model', () => {
+    const html = renderGeneric(vagueFx() as never, 'Dyson cordless vacuum', 0)
+    expect(html).toContain('data-testid="cannot-compare"')
+    expect(html).not.toContain('Lowest reported matching offer')
+    expect(html).not.toContain('data-testid="cheapest"')
   })
 })

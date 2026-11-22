@@ -1,5 +1,6 @@
 export { buildComparison, analyzeOffer, summarizeFiltering } from './compare'
-export { detectTarget, defaultVariant, FAMILIES, targetLabel, classifyTitle, VERIFIED_PART_NUMBERS } from './families'
+export { buildGenericSpec, refineFromTitle, makeGenericTarget, discoverDimensions, identityLevel, coversIdentity, missingFromTitle, classifyGeneric, attributesOf, INSUFFICIENT_MESSAGE } from './generic'
+export { detectTarget, defaultVariant, dimensionsFor, FAMILIES, targetLabel, classifyTitle, VERIFIED_PART_NUMBERS } from './families'
 export { detectCondition } from './condition'
 export { identifySeller, sellerKey } from './seller'
 export { assessPrices, buildBaseline, median, ANOMALY_RATIO, MIN_INDEPENDENT_SELLERS } from './anomalies'

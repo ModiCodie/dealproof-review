@@ -1,0 +1,14 @@
+{
+ "_note": "SYNTHETIC: invented retailers, prices and listings for tests. Not PricesAPI data.",
+ "query": "Zorblax Quantum Teapot 9000",
+ "market": "us",
+ "candidates": [],
+ "source": {
+  "scrapedAt": "2026-11-21T15:00:00.000Z",
+  "upstreamCacheSource": "miss",
+  "upstreamCacheAgeSeconds": null,
+  "servedStale": null,
+  "degraded": null,
+  "upstreamLatencyMs": 21000
+ }
+}

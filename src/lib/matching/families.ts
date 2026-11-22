@@ -10,8 +10,9 @@
  * but not verified are reported as information and never change a decision.
  */
 
-import type { Dimension, Evidence, FamilyId, FamilyInfo, MatchDecision, ProductTarget } from './types'
+import type { Dimension, Evidence, FamilyId, FamilyInfo, FamilyTarget, MatchDecision, ProductTarget } from './types'
 import { capacities, has, normalizeText } from './text'
+import { classifyGeneric, discoverDimensions, optionLabel } from './generic'
 
 // ---------------------------------------------------------------------------
 // Verified manufacturer part numbers (read from official pages on 2026-11-19)
@@ -106,6 +107,11 @@ export const FAMILIES: Record<FamilyId, FamilyInfo> = {
 }
 
 export function targetLabel(t: ProductTarget): string {
+  if (t.family === 'generic') {
+    const parts = [t.spec.title.length > 110 ? `${t.spec.title.slice(0, 107)}...` : t.spec.title]
+    for (const [k, v] of Object.entries(t.variant)) parts.push(optionLabel(k, v))
+    return parts.join(' · ')
+  }
   const f = FAMILIES[t.family]
   const parts = [`${f.brand} ${f.name}`]
   for (const d of f.dimensions) {
@@ -113,6 +119,11 @@ export function targetLabel(t: ProductTarget): string {
     if (opt) parts.push(opt.label)
   }
   return parts.join(' · ')
+}
+
+/** The variant controls for a target: fixed for the specialised products, discovered from the listings for any other. */
+export function dimensionsFor(target: ProductTarget, titles: (string | null)[]): Dimension[] {
+  return target.family === 'generic' ? discoverDimensions(target.spec, titles) : FAMILIES[target.family].dimensions
 }
 
 export function defaultVariant(family: FamilyId): Record<string, string> {
@@ -247,7 +258,7 @@ const EDITION_LABEL: Record<Edition, string> = {
   business: 'for Business',
 }
 
-function classifyLogitech(title: string | null, target: ProductTarget): MatchDecision {
+function classifyLogitech(title: string | null, target: FamilyTarget): MatchDecision {
   const t = normalizeText(title)
   const ev: Evidence[] = []
   if (!t) return decide('AMBIGUOUS', "The listing has no title, so we can't tell what it is.", ['No title text.'], ev)
@@ -333,7 +344,7 @@ function classifyLogitech(title: string | null, target: ProductTarget): MatchDec
 // Samsung 990 PRO
 // ---------------------------------------------------------------------------
 
-function classifySamsung(title: string | null, target: ProductTarget): MatchDecision {
+function classifySamsung(title: string | null, target: FamilyTarget): MatchDecision {
   const t = normalizeText(title)
   const ev: Evidence[] = []
   if (!t) return decide('AMBIGUOUS', "The listing has no title, so we can't tell what it is.", ['No title text.'], ev)
@@ -460,12 +471,13 @@ function classifySamsung(title: string | null, target: ProductTarget): MatchDeci
   if (!heatsink) {
     return decide('LIKELY', `Probably the ${wantCap} model, but the listing doesn't say whether it has a heatsink.`, ['Model and size match; the heatsink version is not stated.', ...codeNote], ev)
   }
-  return decide('EXACT', `Same model and variant: 990 PRO ${wantCap}, ${wantHs === 'with' ? 'with' : 'without'} heatsink.`, ['Model, size and heatsink are stated and match.'], ev)
+  return decide('EXACT', `Title names the same model and variant: 990 PRO ${wantCap}, ${wantHs === 'with' ? 'with' : 'without'} heatsink.`, ['Model, size and heatsink are stated and match.'], ev)
 }
 
 // ---------------------------------------------------------------------------
 
 export function classifyTitle(target: ProductTarget, title: string | null): MatchDecision {
+  if (target.family === 'generic') return classifyGeneric(target, title)
   switch (target.family) {
     case 'sony-wh-1000xm5':
       return classifySony(title)

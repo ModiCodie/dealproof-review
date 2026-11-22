@@ -36,3 +36,32 @@ export const savedProductsSchema: CollectionSchema = {
     admin: { read: 'own', create: true, update: false, delete: 'own' },
   },
 }
+
+/**
+ * The last successfully captured prices for one saved generic product.
+ *
+ * Server-only, like `search_cache`: denied to every role from the browser, so no
+ * client can read, forge or edit a snapshot. Only the server actions
+ * `captureSavedSnapshot` / `discardSavedSnapshot` touch it, after checking that the
+ * verified caller owns the saved record. The contents are copied by the server from
+ * its own price cache (never from the browser), cover only the one saved product
+ * group, and are deleted when the saved record is removed. See docs/general-search.md.
+ */
+export const savedSnapshotsSchema: CollectionSchema = {
+  name: 'saved_snapshots',
+  columns: [
+    { name: 'savedId', storage: 'text', interpretation: { kind: 'plain' }, required: true, maxLength: 128 },
+    { name: 'userId', storage: 'text', interpretation: { kind: 'plain' }, required: true, maxLength: 128 },
+    { name: 'query', storage: 'text', interpretation: { kind: 'plain' }, maxLength: 200 },
+    // { candidate, offers, source, truncated } (auto stringified/parsed)
+    { name: 'payload', storage: 'text', interpretation: { kind: 'json' } },
+    { name: 'capturedAtMs', storage: 'number', interpretation: { kind: 'plain' } },
+  ],
+  uniqueOn: ['savedId'],
+  permissions: {
+    '*': { read: false, create: false, update: false, delete: false },
+    viewer: { read: false, create: false, update: false, delete: false },
+    member: { read: false, create: false, update: false, delete: false },
+    admin: { read: false, create: false, update: false, delete: false },
+  },
+}

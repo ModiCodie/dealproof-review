@@ -51,6 +51,18 @@
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
 
+  /* Semantic tones used by match / caution / variant states. Light values here so
+     the utilities exist; the active theme (themes.css) sets the real ones. */
+  --color-ok: #0b7348;
+  --color-ok-soft: #e5f4ec;
+  --color-likely: #1c5aa6;
+  --color-likely-soft: #e7f0fb;
+  --color-caution: #8a4a06;
+  --color-caution-soft: #fff4de;
+  --color-caution-line: #efc57a;
+  --color-variant: #5a3dc0;
+  --color-variant-soft: #eeeaff;
+
   /* Status colors — constant across all themes */
   --color-success: #10b981;
   --color-success-foreground: #ffffff;
@@ -168,8 +180,38 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--color-foreground);
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+  }
+
+  /* Visible keyboard focus on interactive elements only (never on containers).
+   * Components that draw their own ring (Button, Input) use `outline-none`,
+   * which wins over this base rule. */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  select:focus-visible,
+  input:focus-visible,
+  [role="radio"]:focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+
+  /* Hide the native disclosure triangle; components draw their own chevron. */
+  summary { list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   /* Scrollbar styling */
