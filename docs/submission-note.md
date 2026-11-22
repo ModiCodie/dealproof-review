@@ -1,48 +1,40 @@
 # DealProof: submission note
 
-Draft for the owner to review and edit. Lines marked **[CONFIRM]** are things only the owner can attest to; delete or change them if they are not true.
-
-**Repository:** https://github.com/ModiCodie/dealproof (currently private) · **App URL:** https://dealproof.app.space
+**App:** https://dealproof-review.app.space (sign-in required) · **Repository:** https://github.com/ModiCodie/dealproof-review (private; reviewer access must be granted) · **Release:** #2, `main` at the latest commit listed in the repository.
 
 ## 1. What I built
 
-DealProof is a price-comparison app whose point is *not comparing the wrong products*. For three products (Sony WH-1000XM5, Logitech MX Master 3S, Samsung 990 PRO) it searches retailer offers, classifies each listing as the same model and variant, a likely match, ambiguous, a different variant or a different product, and shows the lowest reported matching offer with everything it cannot verify (condition, shipping, price accuracy, data age). It flags unusually low prices as a rule of thumb, not as fraud, and lets a signed-in user save a product and exact variant and reopen the last stored comparison.
+DealProof compares retailer prices without comparing the wrong products. A signed-in user searches for any consumer product, picks one of up to three product groups PricesAPI returns, and sees that group's listings classified as same model, likely the same, cannot tell, different variant or different product, each with a reason. The lowest-price headline is conservative: for general products it needs at least 3 independent sellers listing the item as new with no open configuration, otherwise the page says why it cannot name a reliable lowest price. Condition and shipping stay "unknown" when not stated; every price is labelled unverified. Users can save a comparison; it keeps the chosen group and a server-side snapshot of the last successfully captured prices, so a failed or ambiguous refresh never replaces it or switches product. Three featured products (Sony WH-1000XM5, Logitech MX Master 3S, Samsung 990 PRO) have hand-written rules and free, clearly labelled demos.
 
 ## 2. DeepSpace integrations used
 
-- Authentication: protected routes, JWT-verified server actions.
-- Record collections with permissions: `saved_products` (owner-only via `userBound`/`ownerField`/`own`, unique per user and product, immutable columns); server-only `search_cache` and `usage_claims`.
-- `useQuery` / `useMutations` for the saved list.
-- Server actions: `searchProducts` (the only path to the PricesAPI) and `getSavedComparison`.
-- Secrets store for the PricesAPI key.
-- DeepSpace's test tooling: test accounts and Playwright fixtures.
+- **Authentication** and JWT-verified **server actions**: the only path to PricesAPI and to snapshots; identity comes from the token, never from parameters.
+- **Record collections with permissions**: `saved_products` (owner-only, unique per user and product, immutable columns); server-only `search_cache`, `usage_claims`, `saved_snapshots` (all client roles denied).
+- **`useQuery` / `useMutations`** with confirmed writes: the saved list, and save/remove that wait for server acknowledgement (capture runs only after the record exists).
+- **Secrets store** for `PRICESAPI_KEY`; **test tooling** (test accounts, Playwright) for two-account tests on real local record storage.
 
-External data: PricesAPI (Search endpoint).
+Not used, deliberately: AI/LLM, payments, messaging, file storage, cron. Matching must be deterministic and explainable, and none of them improves the MVP.
 
 ## 3. Main engineering tradeoff
 
-Correctness and explainability over coverage. I used deterministic, rule-based matching instead of an LLM, so every decision has a stated reason and a test, at the cost of supporting only three products and trusting listing titles. A second tradeoff: saved products store a small bookmark row, not a copy of the prices, so a saved product reopens with the *latest* stored data for its search rather than a snapshot.
+Correctness and explainability over coverage and convenience. Matching is title-only, rule-based and conservative because PricesAPI gives no product identifiers: when evidence is missing (no model code, unstated capacity or connector, unknown condition), the app says "cannot tell" or withholds the headline rather than guessing. The cost is that many real searches end in "not enough to determine a reliable lowest price". A second tradeoff: saved comparisons store a minimal owner-only snapshot so they survive failed refreshes, at the price of retaining third-party data whose retention terms PricesAPI does not specify (kept minimal, no expiry, not legal advice).
 
 ## 4. What the coding agent implemented
 
-Claude Code (Claude Sonnet 5.5 for the later days) wrote essentially all of the code, tests and documentation under my direction across five working days: the PricesAPI client, cache and quota logic, the matching and anomaly engine, the comparison and saved-product UI, the schema and server actions, the Playwright suites, and the docs. I set the scope, reviewed each day's report and made the product decisions recorded in the briefs (for example: keep the 60% rule unchanged, flagged offers stay eligible for the headline, no automatic paid requests, disable saving for demo samples). **[CONFIRM the level of review you actually did.]**
+Claude Code (Claude Sonnet 5.5 for the later work) wrote the code, tests and documentation under my direction over five working days: PricesAPI client, cache and quota, the matching/anomaly/condition engine, candidate selection, comparison and saved-product UI, schemas, server actions and snapshot logic, unit and Playwright suites (326 unit, 44 browser, 10 opt-in skipped), the redesign, and the docs. I set scope and made the product decisions in the briefs (for example: no automatic paid requests, flagged prices are warnings not exclusions, no price history, conservative price summary, keep the snapshot design without an expiry).
 
-## 5. What I personally verified
+## 5. What I independently verified
 
-Only the following is something I did myself or have direct knowledge of: **[CONFIRM / EDIT every line]**
+- On the live site, by hand, after release #2: production authentication; Samsung demo and variant switching; a real general PricesAPI search; candidate selection and conservative comparison; saving and reopening; persistence after signing out and back in; refreshing saved prices from the cache; cross-account isolation through Saved and direct URLs; removing a comparison and confirming its old URL is inaccessible.
+- Reviewed each stage's report and approved or corrected it; submitted the DeepSpace bug report for the first app's deploy (id `8d11d4c4-e418-40eb-9912-3348a9cef234`).
 
-- I ran the `deepspace feedback` command and submitted the deployment bug report myself (reference `8d11d4c4-e418-40eb-9912-3348a9cef234`).
-- I reviewed the daily reports and approved moving to the next day.
-- **[CONFIRM or delete]** I opened the app locally and tried search, variant selection, saving and reopening: *(write exactly what you did)*.
-- **[CONFIRM or delete]** I checked the saved-product behaviour with two accounts myself: *(only if true)*.
+Reported but **not** independently reproduced by me (agent results): the automated suites, TypeScript/ESLint/build, the local two-phase integration test of the snapshot lifecycle, and the read-only post-deploy checks (release ledger, byte-identical asset hashes, clean logs). See [`production-release.md`](production-release.md).
 
-Verification that the coding agent performed, which I am reporting but did not independently reproduce: 169 unit tests, 31 Playwright tests (including a two-account permission test with forged write attempts against real local record storage), TypeScript, ESLint and build checks, and zero PricesAPI calls in the final test runs.
+## 6. What remains unfinished or limited
 
-## 6. Unfinished features and known limitations
-
-- **Not fully deployed.** The first `deepspace deploy` left the app in a release-reconciliation state: the control plane reports "never deployed" with 0 releases, while https://dealproof.app.space serves an older build. I reported it to DeepSpace (id above); there is no response yet. Production authentication, server actions and saved-product persistence are therefore **unverified**; all verification was local. I did not undeploy, re-create or change the app identity.
-- Three products only; title-only matching; prices are feed-reported and never independently verified; condition and shipping are mostly unknown.
-- The 60% low-price rule is a heuristic and sensitive near the line.
-- Saved products are bookmarks of the latest stored data, not snapshots, and there is no monitoring or alerting by design.
-- Tested in Chromium at desktop and 390 px only.
-- Demo samples cannot be saved (they are not stored server-side).
+- **Matching** is title-only: no GTIN/MPN, so a general match is at best "likely"; ambiguous variants and unknown condition are set aside, not resolved. Vague searches are refused. Some products have no good candidate (3 groups per search, US feed).
+- **Prices** are feed-reported and unverified; no history, monitoring or alerts. The 60% low-price rule is a heuristic.
+- **Snapshots** cover general-search saves only; the three featured products and older generic saves read the shared 12-hour cache.
+- **Data rights.** PricesAPI's terms set no retention period but grant no blanket rights to underlying third-party content; I kept data minimal. The three featured-product demos embed captured PricesAPI results (also in the public bundle); I have not confirmed redistribution permission.
+- **First deployment.** The original app (`dealproof`) was left in a platform-side release-reconciliation state and reported to DeepSpace; I left it untouched. The same code was deployed as a fresh app, `dealproof-review`, which is the submission URL. Root cause of the original failure is not established.
+- Tested in headless Chromium (desktop, 390 px) and by hand in my own browser only; no license file.

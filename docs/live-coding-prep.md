@@ -1,5 +1,7 @@
 # Live-coding preparation
 
+> Written before general product search and snapshots. The flow below is still the backbone; for the generic matcher (`src/lib/matching/generic.ts`), candidate selection (`src/lib/candidates.ts`) and snapshots (`src/server/saved/snapshot.ts`) read [`general-search.md`](general-search.md) first.
+
 A map of the code you may be asked to explain or change. Paths are relative to the repo root. Run commands with Node 24 on the PATH (`export PATH=$HOME/.local/node24/node_modules/.bin:$PATH` on this machine).
 
 ## 1. Data flow: browser -> server action -> PricesAPI

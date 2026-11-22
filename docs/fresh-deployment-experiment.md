@@ -1,5 +1,7 @@
 # Fresh deployment experiment
 
+> **Update (2026-11-22):** this page records release #1 only and is kept as written. A second release (`rel_01M822W64Q09N2ZTQS9PWYFFN1`, redesign + general search + snapshots) was deployed and the owner then verified the signed-in production workflows by hand; the items under "Pending" below were covered by that. See [`production-release.md`](production-release.md).
+
 **Result so far:** the fresh deployment under a new app identity **succeeded and the release ledger is complete.** The original app's failure did **not** recur. Signed-in production behaviour (auth, save/reopen/remove, persistence, user isolation) has **not yet been verified** and is listed under "Pending".
 
 ## Identities
@@ -46,4 +48,4 @@ Same code, same CLI, same secret mechanism, same documented order. The original 
 ## Remaining issues
 
 - The original app is still stuck and holds a slot; support has not replied.
-- The repo's README and `submission-note.md` still describe the original app and are not yet updated.
+- (Resolved 2026-11-22) The README and `submission-note.md` now describe the fresh app and release #2.

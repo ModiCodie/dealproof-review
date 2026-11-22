@@ -1,5 +1,7 @@
 # Deployment issue: `release_reconciliation_pending` / `release_in_progress`
 
+> **Historical (original app `dealproof` only).** This describes the first app's failed deploy on 2026-11-19. The submission uses the fresh app `dealproof-review`; see [`production-release.md`](production-release.md).
+
 Investigated 2026-11-19 (diagnostics taken at 23:27 UTC). All commands used here are read-only. No deploy was re-run today, and `app undeploy`, `app init --new-id` and any identity change were avoided.
 
 ## Timeline (Day 2)

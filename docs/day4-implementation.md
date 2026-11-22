@@ -130,7 +130,7 @@ Screenshots (`docs/screenshots/20-27`): search with the save control, saved list
 - Variant and display name are stored once; if the matching engine later renames a variant option, an old row that no longer parses is shown as "not a recognised product" and can only be removed.
 - The update-permission refusal is not independently shown in a browser test (see above).
 - Only three products are supported. Matching still reads titles only. The 60% low-price rule is unchanged and sensitive near the line.
-- Deployment is blocked; nothing here has run on https://dealproof.app.space.
+- Deployment is blocked; nothing here has run on https://dealproof.app.space. (Historical: superseded by the fresh app, see `production-release.md`.)
 
 
 ## Follow-up: write controls wait for `useMutations().ready` (after the official skill was installed)

@@ -1,5 +1,7 @@
 # Day 5 final audit
 
+> **Historical (Day 5).** Written when only the first app existed and nothing was verified in production. Current status: [`production-release.md`](production-release.md).
+
 ## Workflow correctness (Sign in -> Search -> Variant -> Compare -> Warnings -> Save -> Reopen -> Remove)
 
 Every row cites automated evidence (local dev server, mocked prices) unless noted. None of it is production evidence.

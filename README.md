@@ -2,136 +2,114 @@
 
 **Compare prices without comparing the wrong products.**
 
-DealProof searches retailer offers for a product, works out which listings are really the *same model and variant* you chose, and shows the lowest reported price together with everything it cannot verify: condition, shipping, whether a price is real, and how old the data is. Built on the [DeepSpace](https://docs.deep.space/) platform with the [PricesAPI](https://pricesapi.io/docs) price feed. A five-day exercise; by design it supports three products (Sony WH-1000XM5, Logitech MX Master 3S, Samsung 990 PRO).
+Live: **https://dealproof-review.app.space** (sign-in required) · Source: https://github.com/ModiCodie/dealproof-review (private)
 
-> **Deployment status: BLOCKED (platform side), not complete.** The local app is finished and tested. The first `deepspace deploy` left the app stuck in a release-reconciliation state: the control plane says "never deployed" (0 releases), while https://dealproof.app.space answers with an *older* build that does not contain the saved-products features. A bug report was submitted to DeepSpace (id `8d11d4c4-e418-40eb-9912-3348a9cef234`); there is no response yet. Nothing in this README has been verified on the live site. Details and evidence: [`docs/deployment-issue.md`](docs/deployment-issue.md).
+DealProof takes a product search, lets you pick the product you mean, works out which retailer listings are really *that* product and variant, and shows the lowest reported price together with everything it cannot verify: condition, shipping, whether a price is real, and how old the data is. It is built on the [DeepSpace](https://docs.deep.space/) platform with the [PricesAPI](https://pricesapi.io/docs) price feed, as a five-day exercise.
 
 ## The problem
 
-Price comparison sites mix up variants: a 2TB drive with and without a heatsink, a "for Mac" mouse, a used unit, a listing that is really an accessory. The "lowest price" is then a price for something else. DealProof treats *"is this the same product?"* as a separate question from *"is this price real?"* and never merges them.
+Price comparison mixes up variants: a 2TB drive with and without a heatsink, a charging case sold alone, a used unit, an accessory. The "lowest price" is then a price for something else. DealProof treats *"is this the same product?"* and *"is this price real?"* as separate questions and never merges them.
 
-## Main features
+## What it does
 
-- **Search** a supported product; results come from PricesAPI, cached for 12 hours.
-- **Variant-aware matching.** Choose storage size, heatsink or edition; each offer is classified *same model and variant*, *likely the same (details missing)*, *cannot tell*, *different variant* or *different product*, with a one-line reason and the evidence.
-- **Lowest reported matching offer**, never "best deal": shown with match label, condition, availability, shipping, observation time and a retailer link.
-- **Low-price warning** ("Unusually low compared with other listings") when a price is below 60% of the median of other independent sellers. It is a rule of thumb, not an accusation, and not a guarantee of a good deal.
-- **Honest unknowns.** Condition and shipping the feed does not provide stay "unknown" / "Not provided". Every price says "Not independently verified".
-- **Save for later**, a private list that reopens the last stored comparison. Saving is a bookmark, not monitoring.
-- **Two clocks.** "Prices observed by the source" and "stored by DealProof" are always shown separately; stale data is labelled and refreshed only on an explicit click.
+- **Search any consumer product.** Free text → up to three product groups from PricesAPI → you pick the one you mean → a comparison of that group's listings. Typing one of three featured products (Sony WH-1000XM5, Logitech MX Master 3S, Samsung 990 PRO) uses that product's hand-written rules and a free demo.
+- **Title-based, rule-based matching.** Each listing is classified *same model*, *likely the same*, *cannot tell*, *different variant* or *different product*, with a one-line reason. Deterministic rules, no LLM, no similarity score.
+- **Conservative price summary.** For general products a lowest-price headline needs at least 3 independent sellers listing the item as **new** with no open configuration; otherwise the page says there is not enough to determine a reliable lowest price and shows what blocked it.
+- **Honest unknowns.** Condition and shipping the feed does not provide stay "unknown". Every price says "Not independently verified". Defective, used, refurbished and incomplete listings are set apart.
+- **Low-price warning** (below 60% of other independent sellers' median) is a rule of thumb, never an accusation.
+- **Save and reopen.** A private list per user. A saved general comparison keeps the chosen product group and a **snapshot of the last successfully captured prices** (one group's listings, owner-only, deleted with the record). A failed or ambiguous refresh never replaces it and never switches to another product; the page shows when it was captured and that it is not today's price.
+- **Demo vs live is always labelled.** Bundled samples are marked "Saved sample, not a live search" and cannot be saved.
 
 ## Screenshots
 
-All screenshots use bundled or mocked saved data from 19 Nov 2026, **not live prices**.
+Taken by the automated tests against synthetic or bundled fixture data, **not live prices**.
 
 | | |
 |---|---|
-| ![Search result with the Save control](docs/screenshots/20-search-with-save-desktop.png) Search result: lowest reported offer, match label, warning | ![Unusually low offers flagged](docs/screenshots/03-sony-low-price-section-desktop.png) Flagged offers keep their unknown condition/shipping and "not verified" labels |
-| ![Different variants separated](docs/screenshots/04-logitech-mac-desktop.png) Variants grouped apart, likely matches labelled | ![Saved list](docs/screenshots/21-saved-list-desktop.png) Saved list |
-| ![Saved product, fresh data](docs/screenshots/22-saved-detail-fresh-desktop.png) Reopened: both timestamps | ![Saved product, stale data](docs/screenshots/23-saved-detail-stale-desktop.png) Stale data labelled, explicit refresh |
-| ![Mobile result](docs/screenshots/10-sony-sample-mobile.png) 390 px | ![Mobile saved detail](docs/screenshots/27-saved-detail-mobile.png) 390 px |
-
-## Demo walkthrough (about 3 minutes, no search credits)
-
-Use the **saved sample** buttons on the search page (real results captured 19 Nov 2026, labelled "Saved sample, not a live search"):
-
-1. **Search / variants.** Load *Samsung 990 PRO 2TB*. Switch Storage to 4TB and Heatsink to "With heatsink": offers regroup, and other variants move to "Different variants (not comparable)". 4TB shows *Insufficient evidence* instead of a verdict.
-2. **Flagged price.** Load *Sony WH-1000XM5*. The headline shows the lowest reported offer with an amber "Unusually low compared with other listings" note and a reference line with the lowest unflagged offer.
-3. **Unknowns.** In any offer card: "Condition unknown", "Shipping: Not provided", "Not independently verified".
-4. **Likely vs exact.** In the Samsung 2TB view the headline is a *likely* match and says "Not confirmed as the exact variant".
-5. **Save / reopen.** Samples cannot be saved (they are not stored server-side). With a live (or cached) search, choose **Save for later**, open **Saved**, reopen it: you get the stored comparison, both timestamps, and a **Refresh** button that says whether it will spend a search.
+| ![Candidate selection](docs/screenshots/general-search/02-candidate-selection-desktop.png) Pick the product group | ![Generic comparison](docs/screenshots/general-search/03-generic-comparison-desktop.png) Comparison with variants and caveats |
+| ![Samsung demo](docs/screenshots/redesign/after/03-samsung-demo-desktop.png) Featured-product demo | ![Saved detail](docs/screenshots/general-search/10-saved-general-detail-desktop.png) Reopened saved comparison |
+| ![Mobile comparison](docs/screenshots/general-search/03-generic-comparison-mobile.png) 390 px | ![Mobile saved](docs/screenshots/redesign/after/12-saved-detail-mobile.png) 390 px |
 
 ## Architecture
 
 ```
-React page (src/pages/(app)/(protected)/search.tsx)
-   -> src/lib/api.ts  POST /api/actions/searchProducts  (Bearer JWT)
-   -> worker.ts -> src/server/action-routes.ts   verifies the JWT (401 otherwise)
-   -> src/actions/index.ts  searchProducts
-   -> src/server/pricing/search.ts   cache -> lock -> quota -> upstream -> store
-        |- pricesapi.ts   the only code that holds the API key and calls PricesAPI
-        |- normalize.ts   validation + pure response normalization
-        |- quota.ts       atomic claims on the usage_claims collection
-   -> DeepSpace record Durable Object (SQLite): search_cache, usage_claims, saved_products
+React pages (src/pages/(app)/(protected)/ search.tsx, saved/index.tsx, saved/[id].tsx)
+   -> src/lib/api.ts   POST /api/actions/<name>   (Bearer JWT)
+   -> worker.ts -> src/server/action-routes.ts    verifies the JWT (401 otherwise)
+   -> src/actions/index.ts   searchProducts · getSavedComparison · captureSavedSnapshot · discardSavedSnapshot
+        searchProducts -> src/server/pricing/search.ts   cache -> lock -> quota -> upstream -> store
+           |- pricesapi.ts  the only code holding the API key and calling PricesAPI
+           |- normalize.ts  validation + pure normalization (http(s) URLs only, missing fields stay null)
+           |- quota.ts      atomic claims on usage_claims
+        saved actions -> src/server/saved/  comparison.ts (reads cache/snapshot) · snapshot.ts (owner-checked capture)
+   -> DeepSpace record Durable Object (SQLite):
+        saved_products   owner-only, unique per user+product (client collection)
+        search_cache, usage_claims, saved_snapshots   server-only (all client roles denied)
 
-Matching (pure TypeScript, browser): src/lib/matching/  families.ts (rules) · compare.ts · anomalies.ts
-
-Saved products:
-   pages saved/index.tsx, saved/[id].tsx -> useQuery/useMutations on `saved_products` (owner-only, enforced by the DO)
-   -> POST /api/actions/getSavedComparison -> src/server/saved/comparison.ts   (reads search_cache only; no upstream, no quota)
+Matching and comparison run in the browser as pure TypeScript: src/lib/matching/
+   families.ts (featured-product rules) · generic.ts (any product) · condition.ts · compare.ts · anomalies.ts
+   src/lib/candidates.ts (groups -> choices) · src/lib/saved.ts, saved-candidate.ts (saved identity, snapshot use)
 ```
 
-## DeepSpace primitives used
+**Why the server owns the data:** the PricesAPI key lives only in the Worker (`env.PRICESAPI_KEY`). Prices in a snapshot are copied by the server from its own cache; the browser never supplies them. Every snapshot read, write and delete checks the verified caller against the owning saved record.
+
+### DeepSpace primitives used
 
 | Primitive | Used for |
 |---|---|
-| Authentication (`AuthGate`, JWT on actions) | Sign-in required for search and saved pages; the server derives the user id from the verified token |
-| Collections and permissions (`userBound`, `ownerField`, `own`, `uniqueOn`, `immutable`) | Owner-only saved products, duplicate prevention, closed server-only cache and quota collections |
-| `useQuery` / `useMutations` | Live saved list, save and remove with server acknowledgement |
-| Server actions | `searchProducts` (the only path to PricesAPI) and `getSavedComparison` |
-| Secrets store | `PRICESAPI_KEY`, read only as `env.PRICESAPI_KEY` inside the Worker |
-| Test tooling (`deepspace test`, test accounts, Playwright fixtures) | Two-account browser tests against real local record storage |
+| Authentication, JWT-verified actions | Sign-in gate; the server takes the user id from the token, never from parameters |
+| Collections and permissions (`userBound`, `ownerField`, `own`, `uniqueOn`, immutable columns) | Owner-only saved products, duplicate prevention, closed server-only collections |
+| `useQuery` / `useMutations` (`ready`, confirmed writes) | Live saved list; save and remove with server acknowledgement |
+| Server actions | The only path to PricesAPI and to snapshots |
+| Secrets store | `PRICESAPI_KEY` |
+| Test tooling | Test accounts, Playwright fixtures, two-account browser tests on real local record storage |
 
-## PricesAPI integration
+## Setup
 
-One call per uncached search (`Search` endpoint), never retried, 90 s timeout. The response is validated and normalized (`normalize.ts`); only http(s) URLs are kept; missing fields stay `null`. The Search endpoint gives no per-offer condition or timestamp, which is why those are "unknown". The key never reaches the browser or the repo.
-
-## Matching and anomaly logic
-
-- **Matching** is fixed regular-expression rules over normalized titles per product family (`families.ts`). Only two manufacturer-verified Samsung part numbers are used. Safety rules: several models in one title, or a part number contradicting the words, give "cannot tell"; accessory wording is rejected. Condition is read from the title only; the default is unknown. Details: [`docs/day3-implementation.md`](docs/day3-implementation.md).
-- **Anomaly flag** (`anomalies.ts`): one price per independent seller, median of those, flag if price/median < 0.6. At least 6 independent sellers are needed, otherwise "Insufficient evidence". Exact matches form the baseline; likely matches are added only if exact ones are too few. A flag never removes an offer from the headline; it adds a visible warning.
-- **Verification is separate:** no mechanism ties checking evidence to an offer, so every price is "Not independently verified".
-
-## Why these choices
-
-| Choice | Reason |
-|---|---|
-| Deterministic matching, not an LLM | Every decision has a stated, testable reason; no hallucinated equivalence, no per-query model cost, same input gives the same output |
-| Native DeepSpace records for saved products | Ownership, uniqueness and read isolation are enforced by the platform and verified with two accounts; no custom database to build or secure |
-| Native auth and secrets | No password or key handling in app code; the API key stays server-side |
-| App-level cache and quotas | The free PricesAPI allowance is small; a shared 12-hour cache, per-user (3/day) and global (15/day) atomic limits protect it |
-| No price history, predictions or alerts | The data source gives a snapshot only; inventing trends would be unsupported. Saving is deliberately not monitoring |
-
-## Local setup and testing
-
-Requires Node 22.15+ / 24 / 26 and npm 11.6+ (odd Node versions such as 25 are rejected by the scaffolder).
+Requires Node 22.15+ / 24 / 26 and npm 11.6+.
 
 ```bash
 npm install
-npx deepspace auth login                 # browser sign-in
+npx deepspace auth login        # browser sign-in
 # store the PricesAPI key without echoing it or putting it in shell history:
 read -s k && printf 'PRICESAPI_KEY=%s\n' "$k" | npx deepspace secrets upload - ; unset k
-npx deepspace dev start                  # http://localhost:5173
+npx deepspace dev start         # http://localhost:5173
 ```
+
+The local dev server loads the real key, so a *manual* uncached search costs PricesAPI credits (about 10 per search; the app limits users to 3 fresh searches a day and the app overall to 15).
+
+## Testing
 
 | Command | Purpose |
 |---|---|
-| `npm run test:unit` | 181 unit tests (no network, no API credits) |
-| `npx deepspace test run all` | The unit tests plus all 31 browser tests in one run (documented full suite; prices mocked, no credits) |
-| `npm run type-check` / `npm run lint` / `npm run build` | TypeScript, ESLint, production build |
-| `npx deepspace test run e2e` | 31 browser tests. Needs two test accounts (`npx deepspace test accounts create --email <name>@deepspace.test --password-stdin`). Prices are mocked, so **no PricesAPI credits are used**; any request to pricesapi.io fails a test |
-| `npx deepspace deploy` | Deploy to `<name>.app.space` (currently blocked, see above) |
+| `npm run test:unit` | Unit tests, no network or credits (326) |
+| `npx deepspace test run all` | Unit tests plus all browser tests: 326 unit + 44 browser pass; prices are mocked and any request to pricesapi.io fails a test |
+| `npx tsc --noEmit` · `npx eslint .` · `npx vite build` | Types, lint, production build |
+| `npx deepspace test run e2e` | Browser tests (needs two test accounts: `npx deepspace test accounts create --email <name>@deepspace.test --password-stdin`) |
 
-**Agent setup.** The official DeepSpace agent skill is committed under `.claude/skills/deepspace/` and pinned in `skills-lock.json` (upstream `deepdotspace/deepspace-skill`, commit `dadfa915`). Claude Code loads it in a fresh session; it is only an operating guide and adds no runtime dependency.
+10 browser tests are **opt-in** and skipped by default: screenshots (`DP_SHOTS=1`), replay of a locally captured real response (`DP_REPLAY=1`, needs a gitignored file), one live PricesAPI search (`DP_LIVE=1`, **spends credits**), and the two-phase snapshot lifecycle test (`DP_INTEGRATION=1`; it seeds the local cache with synthetic data via `tests/integration/local-cache.py` while the dev server is stopped, then exercises the real, unmocked snapshot actions on local record storage).
 
-Note: the local dev server loads the real `PRICESAPI_KEY` from `.dev.vars`, so a *manual* uncached search in dev costs a credit.
+These are automated results on the local runtime. Production behaviour was verified separately, by hand, by the owner: see [`docs/production-release.md`](docs/production-release.md).
 
-## Known limitations
+## Limitations
 
-- Three products only; matching reads titles only, so a wrong or vague title can mislead it.
-- Prices are feed-reported and never independently verified; condition and shipping are mostly unknown.
-- The 60% rule is a heuristic, sensitive near the line (one Best Buy offer sits at 58%).
-- A saved product reopens with the latest data stored for its search, not a snapshot of what you saw.
-- Demo samples cannot be saved.
-- Tested in headless Chromium at desktop and 390 px only; not on other browsers, tablets or screen readers.
-- **Not deployed**: production verification (live auth, actions, saved-product persistence) has not been done.
+- **Titles are the only evidence.** PricesAPI returns no GTIN/UPC/MPN, brand or spec fields. A general match is therefore at best "likely"; only a model code in both the search and the title can give "same model", and a vague search (e.g. "cordless vacuum") is refused as insufficient identity.
+- **Variants can stay unresolved.** If a title does not state capacity, generation or connector while other listings show the product comes in several, those listings are set aside as "configuration not stated", not guessed.
+- **Unknown condition is never "new".** Condition is read from the title only; listings that do not state it are excluded from the price summary. Shipping and seller details are often missing.
+- **Prices are feed-reported**, not checked at checkout, and there is no history; DealProof says nothing about whether a price is high or low over time.
+- At most 3 product groups per paid search, US feed only, English-title heuristics. Some products will have no good candidate.
+- The 60% low-price rule is a heuristic and sensitive near the line.
+- **Snapshot scope.** Snapshots exist for general-search saves only; saves of the three featured products and older generic saves read the shared 12-hour cache. An unmatched refresh keeps the old snapshot rather than guessing. No monitoring or alerts.
+- **Data retention is a judgement, not a clearance.** PricesAPI's terms do not specify a retention period, but also do not grant blanket rights to the underlying third-party content. The app keeps the minimum (one group per saved comparison, owner-only, deleted with the record, never redistributed). This is not legal advice.
+- **Bundled sample data.** The three featured-product demos ship captured PricesAPI results (retailer titles, prices, URLs) as fixtures, which are also embedded in the public JavaScript bundle. See [`docs/production-release.md`](docs/production-release.md) for this open question.
+- Tested in headless Chromium at desktop and 390 px; production checked by hand in the owner's browser only.
 
 ## Documentation
 
-[`docs/feasibility-plan.md`](docs/feasibility-plan.md) · [`docs/api-experiment-results.md`](docs/api-experiment-results.md) · [`docs/day2-implementation.md`](docs/day2-implementation.md) · [`docs/day3-implementation.md`](docs/day3-implementation.md) · [`docs/day4-implementation.md`](docs/day4-implementation.md) · [`docs/deployment-issue.md`](docs/deployment-issue.md) · [`docs/submission-note.md`](docs/submission-note.md) · [`docs/live-coding-prep.md`](docs/live-coding-prep.md)
+[`docs/production-release.md`](docs/production-release.md) (release history, production acceptance) · [`docs/general-search.md`](docs/general-search.md) (general search, matching, snapshots, release notes) · [`docs/submission-note.md`](docs/submission-note.md) · [`docs/live-coding-prep.md`](docs/live-coding-prep.md)
 
-License: not yet chosen (see the repository owner).
+History (dated; each describes the state at the time): [`feasibility-plan`](docs/feasibility-plan.md) · [`api-experiment-results`](docs/api-experiment-results.md) · [`day2`](docs/day2-implementation.md) · [`day3`](docs/day3-implementation.md) · [`day4`](docs/day4-implementation.md) · [`final-audit`](docs/final-audit.md) · deployment: [`deployment-issue`](docs/deployment-issue.md), [`deployment-forensics`](docs/deployment-forensics.md), [`fresh-deployment-experiment`](docs/fresh-deployment-experiment.md)
 
-## General product search
+**Agent setup.** The official DeepSpace agent skill is committed under `.claude/skills/deepspace/` and pinned in `skills-lock.json`; it is an operating guide and adds no runtime dependency.
 
-Search any consumer product, pick the intended product, then compare offers. See [docs/general-search.md](docs/general-search.md) for the architecture, matching rules and limits.
+License: none chosen (all rights reserved by default).

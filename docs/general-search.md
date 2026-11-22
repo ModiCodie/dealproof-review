@@ -46,7 +46,7 @@ The saved real response exposed defects, fixed without any new paid request:
 - **Candidates.** The feed's groups share almost no listings and differ in configuration, so a pick now compares **that group's own listings**, each judged by its own title; pooling made all picks identical. Groups merge only when their cleaned titles are identical. When no group title confirms the search, the picker says so.
 
 ### Limitations
-- Saved comparisons store the product and variant but not which group was picked, so a reopened saved page pools all groups' listings (still judged by title).
+- ~~Saved comparisons store the product and variant but not which group was picked~~ (fixed afterwards: see "Saved generic comparisons keep their product group" and the snapshot section below).
 - Titles only: no GTIN/MPN, so a generation or connector not in the title stays unresolved. Truncation detection is a heuristic.
 - Specialised products (Sony, Logitech, Samsung) keep their original rules and price policy.
 
