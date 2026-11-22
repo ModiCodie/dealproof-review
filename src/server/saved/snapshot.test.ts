@@ -2,7 +2,7 @@
  * Snapshot persistence for saved GENERIC products. Invented offers/groups only.
  * The server copies prices from its own cache; every failure path must leave the saved prices untouched.
  */
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import airpods from '../../../tests/fixtures/synthetic/airpods.json'
 import sony from '../../../tests/fixtures/real-sony.normalized.json'
 import { getSavedComparison } from './comparison'
@@ -262,8 +262,14 @@ describe('security: nothing the browser sends is trusted', () => {
     await setCache(tools, [A, B])
     const id = await saveAs(tools, A, 'u1')
     const evil = [{ ...A.offers[0], title: 'EVIL INJECTED', price: 0.01 }]
-    const r = (await actions.captureSavedSnapshot({ userId: 'u1', params: { savedId: id, offers: evil, userId: 'u2', payload: { offers: evil }, candidate: { title: 'x' } }, tools, env: {} } as never)) as { success: boolean }
+    vi.useFakeTimers({ toFake: ['Date'] }) // the action reads the real clock; the cached data is pinned to T0
+    vi.setSystemTime(T0)
+    try {
+      const r = (await actions.captureSavedSnapshot({ userId: 'u1', params: { savedId: id, offers: evil, userId: 'u2', payload: { offers: evil }, candidate: { title: 'x' } }, tools, env: {} } as never)) as { success: boolean }
     expect(r.success).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
     const rows = tools.dump(SNAPSHOT_COLLECTION)
     expect(rows).toHaveLength(1)
     expect(rows[0].data.userId).toBe('u1') // the verified caller, never a parameter
